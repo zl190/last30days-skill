@@ -93,9 +93,10 @@ class RedditItem:
     why_relevant: str = ""
     subs: SubScores = field(default_factory=SubScores)
     score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             'id': self.id,
             'title': self.title,
             'url': self.url,
@@ -110,6 +111,9 @@ class RedditItem:
             'subs': self.subs.to_dict(),
             'score': self.score,
         }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
 
 
 @dataclass
@@ -126,9 +130,10 @@ class XItem:
     why_relevant: str = ""
     subs: SubScores = field(default_factory=SubScores)
     score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             'id': self.id,
             'text': self.text,
             'url': self.url,
@@ -141,6 +146,9 @@ class XItem:
             'subs': self.subs.to_dict(),
             'score': self.score,
         }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
 
 
 @dataclass
@@ -157,9 +165,10 @@ class WebSearchItem:
     why_relevant: str = ""
     subs: SubScores = field(default_factory=SubScores)
     score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             'id': self.id,
             'title': self.title,
             'url': self.url,
@@ -172,6 +181,9 @@ class WebSearchItem:
             'subs': self.subs.to_dict(),
             'score': self.score,
         }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
 
 
 @dataclass
@@ -189,9 +201,10 @@ class YouTubeItem:
     why_relevant: str = ""
     subs: SubScores = field(default_factory=SubScores)
     score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             'id': self.id,
             'title': self.title,
             'url': self.url,
@@ -205,6 +218,9 @@ class YouTubeItem:
             'subs': self.subs.to_dict(),
             'score': self.score,
         }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
 
 
 @dataclass
@@ -224,9 +240,10 @@ class HackerNewsItem:
     why_relevant: str = ""
     subs: SubScores = field(default_factory=SubScores)
     score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             'id': self.id,
             'title': self.title,
             'url': self.url,
@@ -242,6 +259,9 @@ class HackerNewsItem:
             'subs': self.subs.to_dict(),
             'score': self.score,
         }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
 
 
 @dataclass
@@ -338,6 +358,7 @@ class Report:
                 why_relevant=r.get('why_relevant', ''),
                 subs=subs,
                 score=r.get('score', 0),
+                cross_refs=r.get('cross_refs', []),
             ))
 
         # Reconstruct X items
@@ -359,6 +380,7 @@ class Report:
                 why_relevant=x.get('why_relevant', ''),
                 subs=subs,
                 score=x.get('score', 0),
+                cross_refs=x.get('cross_refs', []),
             ))
 
         # Reconstruct Web items
@@ -377,6 +399,7 @@ class Report:
                 why_relevant=w.get('why_relevant', ''),
                 subs=subs,
                 score=w.get('score', 0),
+                cross_refs=w.get('cross_refs', []),
             ))
 
         # Reconstruct YouTube items
@@ -399,6 +422,7 @@ class Report:
                 why_relevant=y.get('why_relevant', ''),
                 subs=subs,
                 score=y.get('score', 0),
+                cross_refs=y.get('cross_refs', []),
             ))
 
         # Reconstruct HackerNews items
@@ -424,6 +448,7 @@ class Report:
                 why_relevant=h.get('why_relevant', ''),
                 subs=subs,
                 score=h.get('score', 0),
+                cross_refs=h.get('cross_refs', []),
             ))
 
         return cls(

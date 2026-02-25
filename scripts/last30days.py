@@ -1113,6 +1113,11 @@ def main():
         by_relevance = sorted(normalized_reddit, key=lambda item: item.relevance, reverse=True)
         deduped_reddit = by_relevance[:3]
 
+    # Cross-source linking: annotate items that discuss the same story
+    dedupe.cross_source_link(
+        deduped_reddit, deduped_x, deduped_youtube, deduped_hn, deduped_web,
+    )
+
     progress.end_processing()
 
     # Create report

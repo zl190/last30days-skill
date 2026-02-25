@@ -11,6 +11,14 @@ from . import schema
 OUTPUT_DIR = Path.home() / ".local" / "share" / "last30days" / "out"
 
 
+def _xref_tag(item) -> str:
+    """Return ' [xref: X1, HN3]' string if item has cross_refs, else ''."""
+    refs = getattr(item, 'cross_refs', None)
+    if refs:
+        return f" [xref: {', '.join(refs)}]"
+    return ""
+
+
 def ensure_output_dir():
     """Ensure output directory exists. Supports env override and sandbox fallback."""
     global OUTPUT_DIR
@@ -134,7 +142,7 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             date_str = f" ({item.date})" if item.date else " (date unknown)"
             conf_str = f" [date:{item.date_confidence}]" if item.date_confidence != "high" else ""
 
-            lines.append(f"**{item.id}** (score:{item.score}) r/{item.subreddit}{date_str}{conf_str}{eng_str}")
+            lines.append(f"**{item.id}** (score:{item.score}) r/{item.subreddit}{date_str}{conf_str}{eng_str}{_xref_tag(item)}")
             lines.append(f"  {item.title}")
             lines.append(f"  {item.url}")
             lines.append(f"  *{item.why_relevant}*")
@@ -176,7 +184,7 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             date_str = f" ({item.date})" if item.date else " (date unknown)"
             conf_str = f" [date:{item.date_confidence}]" if item.date_confidence != "high" else ""
 
-            lines.append(f"**{item.id}** (score:{item.score}) @{item.author_handle}{date_str}{conf_str}{eng_str}")
+            lines.append(f"**{item.id}** (score:{item.score}) @{item.author_handle}{date_str}{conf_str}{eng_str}{_xref_tag(item)}")
             lines.append(f"  {item.text[:200]}...")
             lines.append(f"  {item.url}")
             lines.append(f"  *{item.why_relevant}*")
@@ -205,7 +213,7 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
 
             date_str = f" ({item.date})" if item.date else ""
 
-            lines.append(f"**{item.id}** (score:{item.score}) {item.channel_name}{date_str}{eng_str}")
+            lines.append(f"**{item.id}** (score:{item.score}) {item.channel_name}{date_str}{eng_str}{_xref_tag(item)}")
             lines.append(f"  {item.title}")
             lines.append(f"  {item.url}")
             if item.transcript_snippet:
@@ -239,7 +247,7 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
 
             date_str = f" ({item.date})" if item.date else ""
 
-            lines.append(f"**{item.id}** (score:{item.score}) hn/{item.author}{date_str}{eng_str}")
+            lines.append(f"**{item.id}** (score:{item.score}) hn/{item.author}{date_str}{eng_str}{_xref_tag(item)}")
             lines.append(f"  {item.title}")
             lines.append(f"  {item.hn_url}")
             lines.append(f"  *{item.why_relevant}*")
@@ -265,7 +273,7 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             date_str = f" ({item.date})" if item.date else " (date unknown)"
             conf_str = f" [date:{item.date_confidence}]" if item.date_confidence != "high" else ""
 
-            lines.append(f"**{item.id}** [WEB] (score:{item.score}) {item.source_domain}{date_str}{conf_str}")
+            lines.append(f"**{item.id}** [WEB] (score:{item.score}) {item.source_domain}{date_str}{conf_str}{_xref_tag(item)}")
             lines.append(f"  {item.title}")
             lines.append(f"  {item.url}")
             lines.append(f"  {item.snippet[:150]}...")

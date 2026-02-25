@@ -36,7 +36,11 @@ def jaccard_similarity(set1: Set[str], set2: Set[str]) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def get_item_text(item: Union[schema.RedditItem, schema.XItem, schema.YouTubeItem, schema.HackerNewsItem]) -> str:
+AnyItem = Union[schema.RedditItem, schema.XItem, schema.YouTubeItem,
+                schema.HackerNewsItem, schema.WebSearchItem]
+
+
+def get_item_text(item: AnyItem) -> str:
     """Get comparable text from an item."""
     if isinstance(item, schema.RedditItem):
         return item.title
@@ -44,8 +48,21 @@ def get_item_text(item: Union[schema.RedditItem, schema.XItem, schema.YouTubeIte
         return item.title
     elif isinstance(item, schema.YouTubeItem):
         return f"{item.title} {item.channel_name}"
+    elif isinstance(item, schema.WebSearchItem):
+        return item.title
     else:
         return item.text
+
+
+def _get_cross_source_text(item: AnyItem) -> str:
+    """Get text for cross-source comparison.
+
+    Same as get_item_text() but truncates X posts to 100 chars
+    to level the playing field against short Reddit/HN titles.
+    """
+    if isinstance(item, schema.XItem):
+        return item.text[:100]
+    return get_item_text(item)
 
 
 def find_duplicates(
@@ -138,3 +155,42 @@ def dedupe_hackernews(
 ) -> List[schema.HackerNewsItem]:
     """Dedupe Hacker News items."""
     return dedupe_items(items, threshold)
+
+
+def cross_source_link(
+    *source_lists: List[AnyItem],
+    threshold: float = 0.5,
+) -> None:
+    """Annotate items with cross-source references.
+
+    Compares items across different source types using Jaccard similarity
+    on char trigrams. When similarity exceeds threshold, adds bidirectional
+    cross_refs with the related item's ID. Modifies items in-place.
+
+    Args:
+        *source_lists: Variable number of per-source item lists
+        threshold: Similarity threshold for cross-linking (default 0.5)
+    """
+    all_items = []
+    for source_list in source_lists:
+        all_items.extend(source_list)
+
+    if len(all_items) <= 1:
+        return
+
+    # Pre-compute trigrams using cross-source text extraction
+    ngrams = [get_ngrams(_get_cross_source_text(item)) for item in all_items]
+
+    for i in range(len(all_items)):
+        for j in range(i + 1, len(all_items)):
+            # Skip same-source comparisons (handled by per-source dedupe)
+            if type(all_items[i]) is type(all_items[j]):
+                continue
+
+            similarity = jaccard_similarity(ngrams[i], ngrams[j])
+            if similarity >= threshold:
+                # Bidirectional cross-reference
+                if all_items[j].id not in all_items[i].cross_refs:
+                    all_items[i].cross_refs.append(all_items[j].id)
+                if all_items[i].id not in all_items[j].cross_refs:
+                    all_items[j].cross_refs.append(all_items[i].id)
