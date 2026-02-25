@@ -31,9 +31,10 @@ ENRICH_LIMITS = {
 
 
 def _log(msg: str):
-    """Log to stderr."""
-    sys.stderr.write(f"[HN] {msg}\n")
-    sys.stderr.flush()
+    """Log to stderr (only in TTY mode to avoid cluttering Claude Code output)."""
+    if sys.stderr.isatty():
+        sys.stderr.write(f"[HN] {msg}\n")
+        sys.stderr.flush()
 
 
 def _date_to_unix(date_str: str) -> int:

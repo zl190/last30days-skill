@@ -153,13 +153,14 @@ DOTS_FRAMES = ['   ', '.  ', '.. ', '...']
 class Spinner:
     """Animated spinner for long-running operations."""
 
-    def __init__(self, message: str = "Working", color: str = Colors.CYAN):
+    def __init__(self, message: str = "Working", color: str = Colors.CYAN, quiet: bool = False):
         self.message = message
         self.color = color
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.frame_idx = 0
         self.shown_static = False
+        self.quiet = quiet  # Suppress non-TTY start message (still shows ✓ completion)
 
     def _spin(self):
         while self.running:
@@ -177,7 +178,7 @@ class Spinner:
             self.thread.start()
         else:
             # Not a TTY (Claude Code) - just print once
-            if not self.shown_static:
+            if not self.shown_static and not self.quiet:
                 sys.stderr.write(f"⏳ {self.message}\n")
                 sys.stderr.flush()
                 self.shown_static = True
@@ -257,7 +258,7 @@ class ProgressDisplay:
 
     def start_youtube(self):
         msg = random.choice(YOUTUBE_MESSAGES)
-        self.spinner = Spinner(f"{Colors.RED}YouTube{Colors.RESET} {msg}", Colors.RED)
+        self.spinner = Spinner(f"{Colors.RED}YouTube{Colors.RESET} {msg}", Colors.RED, quiet=True)
         self.spinner.start()
 
     def end_youtube(self, count: int):
@@ -266,7 +267,7 @@ class ProgressDisplay:
 
     def start_hackernews(self):
         msg = random.choice(HN_MESSAGES)
-        self.spinner = Spinner(f"{Colors.YELLOW}HN{Colors.RESET} {msg}", Colors.YELLOW)
+        self.spinner = Spinner(f"{Colors.YELLOW}HN{Colors.RESET} {msg}", Colors.YELLOW, quiet=True)
         self.spinner.start()
 
     def end_hackernews(self, count: int):
