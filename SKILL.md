@@ -1,7 +1,7 @@
 ---
 name: last30days
 version: "2.1"
-description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, web. Become an expert and write copy-paste-ready prompts."
+description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, Hacker News, web. Become an expert and write copy-paste-ready prompts."
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
 homepage: https://github.com/mvanhorn/last30days-skill
@@ -25,13 +25,14 @@ metadata:
       - reddit
       - x
       - youtube
+      - hackernews
       - trends
       - prompts
 ---
 
 # last30days v2.1: Research Any Topic from the Last 30 Days
 
-Research ANY topic across Reddit, X, YouTube, and the web. Surface what people are actually discussing, recommending, and debating right now.
+Research ANY topic across Reddit, X, YouTube, Hacker News, and the web. Surface what people are actually discussing, recommending, and debating right now.
 
 ## CRITICAL: Parse User Intent
 
@@ -109,10 +110,10 @@ Use a **timeout of 300000** (5 minutes) on the Bash call. The script typically t
 
 The script will automatically:
 - Detect available API keys
-- Run Reddit/X/YouTube searches
-- Output ALL results including YouTube transcripts
+- Run Reddit/X/YouTube/Hacker News searches
+- Output ALL results including YouTube transcripts and HN comments
 
-**Read the ENTIRE output.** It contains THREE data sections in this order: Reddit items, X items, and YouTube items. If you miss the YouTube section, you will produce incomplete stats.
+**Read the ENTIRE output.** It contains FOUR data sections in this order: Reddit items, X items, Hacker News items, and YouTube items. If you miss sections, you will produce incomplete stats.
 
 **YouTube items in the output look like:** `**{video_id}** (score:N) {channel_name} [N views, N likes]` followed by a title, URL, and optional transcript snippet. Count them and include them in your synthesis and stats block.
 
@@ -253,7 +254,8 @@ CITATION PRIORITY (most to least preferred):
 1. @handles from X — "per @handle" (these prove the tool's unique value)
 2. r/subreddits from Reddit — "per r/subreddit"
 3. YouTube channels — "per [channel name] on YouTube" (transcript-backed insights)
-4. Web sources — ONLY when Reddit/X/YouTube don't cover that specific fact
+4. HN discussions — "per HN" or "per hn/username" (developer community signal)
+5. Web sources — ONLY when Reddit/X/YouTube/HN don't cover that specific fact
 
 The tool's value is surfacing what PEOPLE are saying, not what journalists wrote.
 When both a web article and an X post cover the same fact, cite the X post.
@@ -302,6 +304,7 @@ KEY PATTERNS from the research:
 ✅ All agents reported back!
 ├─ 🟠 Reddit: {N} threads │ {N} upvotes │ {N} comments
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
+├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
 ├─ 🌐 Web: {N} pages (supplementary)
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
@@ -309,6 +312,7 @@ KEY PATTERNS from the research:
 ```
 
 If Reddit returned 0 threads, write: "├─ 🟠 Reddit: 0 threads (no results this cycle)"
+If HN returned 0 stories, write: "├─ 🟡 HN: 0 stories (no results this cycle)"
 If YouTube returned 0 videos or yt-dlp is not installed, omit the YouTube line entirely.
 NEVER use plain text dashes (-) or pipe (|). ALWAYS use ├─ └─ │ and the emoji.
 
@@ -471,7 +475,7 @@ After delivering a prompt, end with:
 ```
 ---
 📚 Expert in: {TOPIC} for {TARGET_TOOL}
-📊 Based on: {n} Reddit threads ({sum} upvotes) + {n} X posts ({sum} likes) + {n} YouTube videos ({sum} views) + {n} web pages
+📊 Based on: {n} Reddit threads ({sum} upvotes) + {n} X posts ({sum} likes) + {n} HN stories ({sum} points) + {n} YouTube videos ({sum} views) + {n} web pages
 
 Want another prompt? Just tell me what you're creating next.
 ```
@@ -483,6 +487,7 @@ Want another prompt? Just tell me what you're creating next.
 **What this skill does:**
 - Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery
 - Sends search queries to Twitter's GraphQL API (via browser cookie auth) or xAI's API (`api.x.ai`) for X search
+- Sends search queries to Algolia HN Search API (`hn.algolia.com`) for Hacker News story and comment discovery (free, no auth)
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics
@@ -494,6 +499,7 @@ Want another prompt? Just tell me what you're creating next.
 - Does not share API keys between providers (OpenAI key only goes to api.openai.com, etc.)
 - Does not log, cache, or write API keys to output files
 - Does not send data to any endpoint not listed above
+- Hacker News source is always available (no API key, no binary dependency)
 - Cannot be invoked autonomously by the agent (`disable-model-invocation: true`)
 
 **Bundled scripts:** `scripts/last30days.py` (main research engine), `scripts/lib/` (search, enrichment, rendering modules), `scripts/lib/vendor/bird-search/` (vendored X search client, MIT licensed)

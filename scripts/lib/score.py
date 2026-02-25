@@ -280,6 +280,64 @@ def score_youtube_items(items: List[schema.YouTubeItem]) -> List[schema.YouTubeI
     return items
 
 
+def compute_hackernews_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
+    """Compute raw engagement score for Hacker News item.
+
+    Formula: 0.55*log1p(points) + 0.45*log1p(num_comments)
+    Points are the primary signal on HN; comments indicate depth of discussion.
+    """
+    if engagement is None:
+        return None
+
+    if engagement.score is None and engagement.num_comments is None:
+        return None
+
+    points = log1p_safe(engagement.score)
+    comments = log1p_safe(engagement.num_comments)
+
+    return 0.55 * points + 0.45 * comments
+
+
+def score_hackernews_items(items: List[schema.HackerNewsItem]) -> List[schema.HackerNewsItem]:
+    """Compute scores for Hacker News items.
+
+    Uses same weight structure as Reddit/X (relevance + recency + engagement).
+    """
+    if not items:
+        return items
+
+    eng_raw = [compute_hackernews_engagement_raw(item.engagement) for item in items]
+    eng_normalized = normalize_to_100(eng_raw)
+
+    for i, item in enumerate(items):
+        rel_score = int(item.relevance * 100)
+        rec_score = dates.recency_score(item.date)
+
+        if eng_normalized[i] is not None:
+            eng_score = int(eng_normalized[i])
+        else:
+            eng_score = DEFAULT_ENGAGEMENT
+
+        item.subs = schema.SubScores(
+            relevance=rel_score,
+            recency=rec_score,
+            engagement=eng_score,
+        )
+
+        overall = (
+            WEIGHT_RELEVANCE * rel_score +
+            WEIGHT_RECENCY * rec_score +
+            WEIGHT_ENGAGEMENT * eng_score
+        )
+
+        if eng_raw[i] is None:
+            overall -= UNKNOWN_ENGAGEMENT_PENALTY
+
+        item.score = max(0, min(100, int(overall)))
+
+    return items
+
+
 def score_websearch_items(items: List[schema.WebSearchItem]) -> List[schema.WebSearchItem]:
     """Compute scores for WebSearch items WITHOUT engagement metrics.
 
@@ -337,7 +395,7 @@ def score_websearch_items(items: List[schema.WebSearchItem]) -> List[schema.WebS
     return items
 
 
-def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem]]) -> List:
+def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.HackerNewsItem]]) -> List:
     """Sort items by score (descending), then date, then source priority.
 
     Args:
@@ -354,15 +412,17 @@ def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSear
         date = item.date or "0000-00-00"
         date_key = -int(date.replace("-", ""))
 
-        # Tertiary: source priority (Reddit > X > YouTube > WebSearch)
+        # Tertiary: source priority (Reddit > X > HN > YouTube > WebSearch)
         if isinstance(item, schema.RedditItem):
             source_priority = 0
         elif isinstance(item, schema.XItem):
             source_priority = 1
-        elif isinstance(item, schema.YouTubeItem):
+        elif isinstance(item, schema.HackerNewsItem):
             source_priority = 2
-        else:  # WebSearchItem
+        elif isinstance(item, schema.YouTubeItem):
             source_priority = 3
+        else:  # WebSearchItem
+            source_priority = 4
 
         # Quaternary: title/text for stability
         text = getattr(item, "title", "") or getattr(item, "text", "")

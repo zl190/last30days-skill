@@ -246,6 +246,14 @@ def is_ytdlp_available() -> bool:
     return youtube_yt.is_ytdlp_installed()
 
 
+def is_hackernews_available() -> bool:
+    """Check if Hacker News source is available.
+
+    Always returns True - HN uses free Algolia API, no key needed.
+    """
+    return True
+
+
 def get_x_source_status(config: Dict[str, Any]) -> Dict[str, Any]:
     """Get detailed X source status for UI decisions.
 

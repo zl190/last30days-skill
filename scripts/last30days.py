@@ -38,9 +38,9 @@ _child_pids: set = set()
 _child_pids_lock = threading.Lock()
 
 TIMEOUT_PROFILES = {
-    "quick":   {"global": 90,  "future": 30, "reddit_future": 60,  "youtube_future": 60,  "http": 15, "enrich_per": 8,  "enrich_total": 30, "enrich_max_items": 10},
-    "default": {"global": 180, "future": 60, "reddit_future": 90,  "youtube_future": 90,  "http": 30, "enrich_per": 15, "enrich_total": 45, "enrich_max_items": 15},
-    "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
+    "quick":   {"global": 90,  "future": 30, "reddit_future": 60,  "youtube_future": 60,  "hackernews_future": 30,  "http": 15, "enrich_per": 8,  "enrich_total": 30, "enrich_max_items": 10},
+    "default": {"global": 180, "future": 60, "reddit_future": 90,  "youtube_future": 90,  "hackernews_future": 60,  "http": 30, "enrich_per": 15, "enrich_total": 45, "enrich_max_items": 15},
+    "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "hackernews_future": 90,  "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
 }
 
 
@@ -98,6 +98,7 @@ from lib import (
     bird_x,
     dates,
     dedupe,
+    hackernews,
     entity_extract,
     env,
     http,
@@ -301,6 +302,34 @@ def _search_youtube(
         youtube_error = response["error"]
 
     return youtube_items, youtube_error
+
+
+def _search_hackernews(
+    topic: str,
+    from_date: str,
+    to_date: str,
+    depth: str,
+) -> tuple:
+    """Search Hacker News via Algolia (runs in thread).
+
+    Returns:
+        Tuple of (hn_items, hn_error)
+    """
+    hn_error = None
+
+    try:
+        response = hackernews.search_hackernews(
+            topic, from_date, to_date, depth=depth,
+        )
+    except Exception as e:
+        return [], f"{type(e).__name__}: {e}"
+
+    hn_items = hackernews.parse_hackernews_response(response)
+
+    if response.get("error"):
+        hn_error = response["error"]
+
+    return hn_items, hn_error
 
 
 def _search_web(
@@ -516,6 +545,7 @@ def run_research(
     reddit_items = []
     x_items = []
     youtube_items = []
+    hackernews_items = []
     web_items = []
     raw_openai = None
     raw_xai = None
@@ -523,6 +553,7 @@ def run_research(
     reddit_error = None
     x_error = None
     youtube_error = None
+    hackernews_error = None
     web_error = None
 
     # Determine web search mode
@@ -565,18 +596,20 @@ def run_research(
                     progress.show_error(f"YouTube error: {e}")
             if progress:
                 progress.end_youtube(len(youtube_items))
-        return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error
+        return reddit_items, x_items, youtube_items, hackernews_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, web_error
 
     # Determine which searches to run
     do_reddit = sources in ("both", "reddit", "all", "reddit-web")
     do_x = sources in ("both", "x", "all", "x-web")
+    do_hackernews = True  # HN is always available (no API key)
 
-    # Run Reddit, X, YouTube, and Web searches in parallel
+    # Run Reddit, X, YouTube, HN, and Web searches in parallel
     reddit_future = None
     x_future = None
     youtube_future = None
+    hackernews_future = None
     web_future = None
-    max_workers = 2 + (1 if run_youtube else 0) + (1 if web_backend else 0)
+    max_workers = 2 + (1 if run_youtube else 0) + (1 if do_hackernews else 0) + (1 if web_backend else 0)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit searches
@@ -601,6 +634,13 @@ def run_research(
                 progress.start_youtube()
             youtube_future = executor.submit(
                 _search_youtube, topic, from_date, to_date, depth
+            )
+
+        if do_hackernews:
+            if progress:
+                progress.start_hackernews()
+            hackernews_future = executor.submit(
+                _search_hackernews, topic, from_date, to_date, depth
             )
 
         if web_backend:
@@ -660,6 +700,23 @@ def run_research(
                     progress.show_error(f"YouTube error: {e}")
             if progress:
                 progress.end_youtube(len(youtube_items))
+
+        if hackernews_future:
+            hn_timeout = timeouts.get("hackernews_future", future_timeout)
+            try:
+                hackernews_items, hackernews_error = hackernews_future.result(timeout=hn_timeout)
+                if hackernews_error and progress:
+                    progress.show_error(f"HN error: {hackernews_error}")
+            except TimeoutError:
+                hackernews_error = f"HN search timed out after {hn_timeout}s"
+                if progress:
+                    progress.show_error(hackernews_error)
+            except Exception as e:
+                hackernews_error = f"{type(e).__name__}: {e}"
+                if progress:
+                    progress.show_error(f"HN error: {e}")
+            if progress:
+                progress.end_hackernews(len(hackernews_items))
 
         if web_future:
             try:
@@ -747,6 +804,14 @@ def run_research(
         if progress:
             progress.end_reddit_enrich()
 
+    # Enrich HN stories with comments
+    if hackernews_items:
+        try:
+            hackernews_items = hackernews.enrich_top_stories(hackernews_items, depth=depth)
+        except Exception as e:
+            sys.stderr.write(f"[HN] Enrichment error: {e}\n")
+            sys.stderr.flush()
+
     # Phase 2: Supplemental search based on entities from Phase 1
     # Skip on --quick (speed matters), mock mode, or if Reddit is rate-limiting
     if depth != "quick" and not mock and (reddit_items or x_items):
@@ -760,7 +825,7 @@ def run_research(
         if sup_x:
             x_items.extend(sup_x)
 
-    return reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error
+    return reddit_items, x_items, youtube_items, hackernews_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, web_error
 
 
 def main():
@@ -878,6 +943,7 @@ def main():
             "bird_authenticated": x_source_status["bird_authenticated"],
             "bird_username": x_source_status.get("bird_username"),
             "youtube": has_ytdlp,
+            "hackernews": True,
             "web_search_backend": web_source,
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
             "brave": bool(config.get("BRAVE_API_KEY")),
@@ -905,6 +971,7 @@ def main():
         "bird_authenticated": x_source_status["bird_authenticated"],
         "bird_username": x_source_status.get("bird_username"),
         "youtube": has_ytdlp,
+        "hackernews": True,
         "web_search_backend": web_source,
     }
     ui.show_diagnostic_banner(diag)
@@ -982,7 +1049,7 @@ def main():
         mode = sources
 
     # Run research
-    reddit_items, x_items, youtube_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, web_error = run_research(
+    reddit_items, x_items, youtube_items, hackernews_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, web_error = run_research(
         args.topic,
         sources,
         config,
@@ -1004,6 +1071,7 @@ def main():
     normalized_reddit = normalize.normalize_reddit_items(reddit_items, from_date, to_date)
     normalized_x = normalize.normalize_x_items(x_items, from_date, to_date)
     normalized_youtube = normalize.normalize_youtube_items(youtube_items, from_date, to_date) if youtube_items else []
+    normalized_hn = normalize.normalize_hackernews_items(hackernews_items, from_date, to_date) if hackernews_items else []
     normalized_web = websearch.normalize_websearch_items(web_items, from_date, to_date) if web_items else []
 
     # Hard date filter: exclude items with verified dates outside the range
@@ -1014,24 +1082,28 @@ def main():
     # that prefers recent videos but keeps older ones for evergreen topics.
     # YouTube content has a longer shelf life than tweets/posts.
     filtered_youtube = normalized_youtube
+    filtered_hn = normalize.filter_by_date_range(normalized_hn, from_date, to_date) if normalized_hn else []
     filtered_web = normalize.filter_by_date_range(normalized_web, from_date, to_date) if normalized_web else []
 
     # Score items
     scored_reddit = score.score_reddit_items(filtered_reddit)
     scored_x = score.score_x_items(filtered_x)
     scored_youtube = score.score_youtube_items(filtered_youtube) if filtered_youtube else []
+    scored_hn = score.score_hackernews_items(filtered_hn) if filtered_hn else []
     scored_web = score.score_websearch_items(filtered_web) if filtered_web else []
 
     # Sort items
     sorted_reddit = score.sort_items(scored_reddit)
     sorted_x = score.sort_items(scored_x)
     sorted_youtube = score.sort_items(scored_youtube) if scored_youtube else []
+    sorted_hn = score.sort_items(scored_hn) if scored_hn else []
     sorted_web = score.sort_items(scored_web) if scored_web else []
 
     # Dedupe items
     deduped_reddit = dedupe.dedupe_reddit(sorted_reddit)
     deduped_x = dedupe.dedupe_x(sorted_x)
     deduped_youtube = dedupe.dedupe_youtube(sorted_youtube) if sorted_youtube else []
+    deduped_hn = dedupe.dedupe_hackernews(sorted_hn) if sorted_hn else []
     deduped_web = websearch.dedupe_websearch(sorted_web) if sorted_web else []
 
     # Minimum result guarantee: if all Reddit results were filtered out but
@@ -1055,10 +1127,12 @@ def main():
     report.reddit = deduped_reddit
     report.x = deduped_x
     report.youtube = deduped_youtube
+    report.hackernews = deduped_hn
     report.web = deduped_web
     report.reddit_error = reddit_error
     report.x_error = x_error
     report.youtube_error = youtube_error
+    report.hackernews_error = hackernews_error
     report.web_error = web_error
 
     # Generate context snippet
@@ -1071,7 +1145,7 @@ def main():
     if sources == "web":
         progress.show_web_only_complete()
     else:
-        progress.show_complete(len(deduped_reddit), len(deduped_x), len(deduped_youtube))
+        progress.show_complete(len(deduped_reddit), len(deduped_x), len(deduped_youtube), len(deduped_hn))
 
     # Build source info for status footer
     source_info = {}
@@ -1127,6 +1201,16 @@ def main():
                 "author": item.channel_name,
                 "content": item.transcript_snippet[:500] if item.transcript_snippet else item.title,
                 "engagement_score": item.engagement.views if item.engagement and item.engagement.views else 0,
+                "relevance_score": item.relevance,
+            })
+        for item in deduped_hn:
+            findings.append({
+                "source": "hackernews",
+                "url": item.hn_url,
+                "title": item.title,
+                "author": item.author,
+                "content": item.title,
+                "engagement_score": item.engagement.score if item.engagement else 0,
                 "relevance_score": item.relevance,
             })
         for item in deduped_web:

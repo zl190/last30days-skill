@@ -30,9 +30,10 @@ def _assess_data_freshness(report: schema.Report) -> dict:
     reddit_recent = sum(1 for r in report.reddit if r.date and r.date >= report.range_from)
     x_recent = sum(1 for x in report.x if x.date and x.date >= report.range_from)
     web_recent = sum(1 for w in report.web if w.date and w.date >= report.range_from)
+    hn_recent = sum(1 for h in report.hackernews if h.date and h.date >= report.range_from)
 
-    total_recent = reddit_recent + x_recent + web_recent
-    total_items = len(report.reddit) + len(report.x) + len(report.web)
+    total_recent = reddit_recent + x_recent + web_recent + hn_recent
+    total_items = len(report.reddit) + len(report.x) + len(report.web) + len(report.hackernews)
 
     return {
         "reddit_recent": reddit_recent,
@@ -215,6 +216,42 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             lines.append(f"  *{item.why_relevant}*")
             lines.append("")
 
+    # Hacker News items
+    if report.hackernews_error:
+        lines.append("### Hacker News Stories")
+        lines.append("")
+        lines.append(f"**ERROR:** {report.hackernews_error}")
+        lines.append("")
+    elif report.hackernews:
+        lines.append("### Hacker News Stories")
+        lines.append("")
+        for item in report.hackernews[:limit]:
+            eng_str = ""
+            if item.engagement:
+                eng = item.engagement
+                parts = []
+                if eng.score is not None:
+                    parts.append(f"{eng.score}pts")
+                if eng.num_comments is not None:
+                    parts.append(f"{eng.num_comments}cmt")
+                if parts:
+                    eng_str = f" [{', '.join(parts)}]"
+
+            date_str = f" ({item.date})" if item.date else ""
+
+            lines.append(f"**{item.id}** (score:{item.score}) hn/{item.author}{date_str}{eng_str}")
+            lines.append(f"  {item.title}")
+            lines.append(f"  {item.hn_url}")
+            lines.append(f"  *{item.why_relevant}*")
+
+            # Comment insights
+            if item.comment_insights:
+                lines.append(f"  Insights:")
+                for insight in item.comment_insights[:3]:
+                    lines.append(f"    - {insight}")
+
+            lines.append("")
+
     # Web items (if any - populated by the assistant)
     if report.web_error:
         lines.append("### Web Results")
@@ -278,6 +315,14 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
         reason = source_info.get("x_skip_reason", "No Bird CLI or XAI_API_KEY")
         lines.append(f"  ⏭️ X: skipped — {reason}")
 
+    # Hacker News
+    if report.hackernews_error:
+        lines.append(f"  ❌ HN: error - {report.hackernews_error}")
+    elif report.hackernews:
+        lines.append(f"  ✅ HN: {len(report.hackernews)} stories")
+    else:
+        lines.append("  ⏭️ HN: 0 stories found")
+
     # YouTube
     if report.youtube_error:
         lines.append(f"  ❌ YouTube: error — {report.youtube_error}")
@@ -325,6 +370,8 @@ def render_context_snippet(report: schema.Report) -> str:
         all_items.append((item.score, "Reddit", item.title, item.url))
     for item in report.x[:5]:
         all_items.append((item.score, "X", item.text[:50] + "...", item.url))
+    for item in report.hackernews[:5]:
+        all_items.append((item.score, "HN", item.title[:50] + "...", item.hn_url))
     for item in report.web[:5]:
         all_items.append((item.score, "Web", item.title[:50] + "...", item.url))
 
@@ -412,6 +459,33 @@ def render_full_report(report: schema.Report) -> str:
 
             lines.append("")
             lines.append(f"> {item.text}")
+            lines.append("")
+
+    # HN section
+    if report.hackernews:
+        lines.append("## Hacker News Stories")
+        lines.append("")
+        for item in report.hackernews:
+            lines.append(f"### {item.id}: {item.title}")
+            lines.append("")
+            lines.append(f"- **Author:** {item.author}")
+            lines.append(f"- **HN URL:** {item.hn_url}")
+            if item.url:
+                lines.append(f"- **Article URL:** {item.url}")
+            lines.append(f"- **Date:** {item.date or 'Unknown'}")
+            lines.append(f"- **Score:** {item.score}/100")
+            lines.append(f"- **Relevance:** {item.why_relevant}")
+
+            if item.engagement:
+                eng = item.engagement
+                lines.append(f"- **Engagement:** {eng.score or '?'} points, {eng.num_comments or '?'} comments")
+
+            if item.comment_insights:
+                lines.append("")
+                lines.append("**Key Insights from Comments:**")
+                for insight in item.comment_insights:
+                    lines.append(f"- {insight}")
+
             lines.append("")
 
     # Web section

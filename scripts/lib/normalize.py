@@ -4,7 +4,7 @@ from typing import Any, Dict, List, TypeVar, Union
 
 from . import dates, schema
 
-T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem)
+T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.HackerNewsItem)
 
 
 def filter_by_date_range(
@@ -194,6 +194,63 @@ def normalize_youtube_items(
             engagement=engagement,
             transcript_snippet=item.get("transcript_snippet", ""),
             relevance=item.get("relevance", 0.7),
+            why_relevant=item.get("why_relevant", ""),
+        ))
+
+    return normalized
+
+
+def normalize_hackernews_items(
+    items: List[Dict[str, Any]],
+    from_date: str,
+    to_date: str,
+) -> List[schema.HackerNewsItem]:
+    """Normalize raw Hacker News items to schema.
+
+    Args:
+        items: Raw HN items from Algolia API
+        from_date: Start of date range
+        to_date: End of date range
+
+    Returns:
+        List of HackerNewsItem objects
+    """
+    normalized = []
+
+    for i, item in enumerate(items):
+        # Parse engagement
+        eng_raw = item.get("engagement") or {}
+        engagement = schema.Engagement(
+            score=eng_raw.get("points"),
+            num_comments=eng_raw.get("num_comments"),
+        )
+
+        # Parse comments (from enrichment)
+        top_comments = []
+        for c in item.get("top_comments", []):
+            top_comments.append(schema.Comment(
+                score=c.get("points", 0),
+                date=None,
+                author=c.get("author", ""),
+                excerpt=c.get("text", ""),
+                url="",
+            ))
+
+        # HN dates are always high confidence (exact timestamps from Algolia)
+        date_str = item.get("date")
+
+        normalized.append(schema.HackerNewsItem(
+            id=f"HN{i+1}",
+            title=item.get("title", ""),
+            url=item.get("url", ""),
+            hn_url=item.get("hn_url", ""),
+            author=item.get("author", ""),
+            date=date_str,
+            date_confidence="high",
+            engagement=engagement,
+            top_comments=top_comments,
+            comment_insights=item.get("comment_insights", []),
+            relevance=item.get("relevance", 0.5),
             why_relevant=item.get("why_relevant", ""),
         ))
 
