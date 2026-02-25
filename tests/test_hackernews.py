@@ -197,8 +197,8 @@ class TestScoreHackernewsItems(unittest.TestCase):
 
 
 class TestSortItemsWithHN(unittest.TestCase):
-    def test_hn_priority_between_x_and_youtube(self):
-        """HN should sort between X and YouTube at same score."""
+    def test_hn_priority_after_youtube(self):
+        """HN should sort after YouTube at same score."""
         x_item = schema.XItem(id="X1", text="test", url="", author_handle="user")
         x_item.score = 50
 
@@ -209,10 +209,10 @@ class TestSortItemsWithHN(unittest.TestCase):
         yt_item.score = 50
 
         sorted_items = score.sort_items([yt_item, hn_item, x_item])
-        # Same score, so sorted by source priority: X > HN > YouTube
+        # Same score, so sorted by source priority: X > YouTube > HN
         self.assertIsInstance(sorted_items[0], schema.XItem)
-        self.assertIsInstance(sorted_items[1], schema.HackerNewsItem)
-        self.assertIsInstance(sorted_items[2], schema.YouTubeItem)
+        self.assertIsInstance(sorted_items[1], schema.YouTubeItem)
+        self.assertIsInstance(sorted_items[2], schema.HackerNewsItem)
 
 
 if __name__ == "__main__":

@@ -289,17 +289,17 @@ class ProgressDisplay:
             sys.stderr.write(f"{Colors.DIM}({elapsed:.1f}s){Colors.RESET}\n")
             sys.stderr.write(f"  {Colors.YELLOW}Reddit:{Colors.RESET} {reddit_count} threads  ")
             sys.stderr.write(f"{Colors.CYAN}X:{Colors.RESET} {x_count} posts")
-            if hn_count:
-                sys.stderr.write(f"  {Colors.YELLOW}HN:{Colors.RESET} {hn_count} stories")
             if youtube_count:
                 sys.stderr.write(f"  {Colors.RED}YouTube:{Colors.RESET} {youtube_count} videos")
+            if hn_count:
+                sys.stderr.write(f"  {Colors.YELLOW}HN:{Colors.RESET} {hn_count} stories")
             sys.stderr.write("\n\n")
         else:
             parts = [f"Reddit: {reddit_count} threads", f"X: {x_count} posts"]
-            if hn_count:
-                parts.append(f"HN: {hn_count} stories")
             if youtube_count:
                 parts.append(f"YouTube: {youtube_count} videos")
+            if hn_count:
+                parts.append(f"HN: {hn_count} stories")
             sys.stderr.write(f"✓ Research complete ({elapsed:.1f}s) - {', '.join(parts)}\n")
         sys.stderr.flush()
 

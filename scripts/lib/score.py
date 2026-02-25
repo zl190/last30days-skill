@@ -412,14 +412,14 @@ def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSear
         date = item.date or "0000-00-00"
         date_key = -int(date.replace("-", ""))
 
-        # Tertiary: source priority (Reddit > X > HN > YouTube > WebSearch)
+        # Tertiary: source priority (Reddit > X > YouTube > HN > WebSearch)
         if isinstance(item, schema.RedditItem):
             source_priority = 0
         elif isinstance(item, schema.XItem):
             source_priority = 1
-        elif isinstance(item, schema.HackerNewsItem):
-            source_priority = 2
         elif isinstance(item, schema.YouTubeItem):
+            source_priority = 2
+        elif isinstance(item, schema.HackerNewsItem):
             source_priority = 3
         else:  # WebSearchItem
             source_priority = 4

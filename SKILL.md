@@ -113,7 +113,7 @@ The script will automatically:
 - Run Reddit/X/YouTube/Hacker News searches
 - Output ALL results including YouTube transcripts and HN comments
 
-**Read the ENTIRE output.** It contains FOUR data sections in this order: Reddit items, X items, Hacker News items, and YouTube items. If you miss sections, you will produce incomplete stats.
+**Read the ENTIRE output.** It contains FIVE data sections in this order: Reddit items, X items, YouTube items, Hacker News items, and WebSearch items. If you miss sections, you will produce incomplete stats.
 
 **YouTube items in the output look like:** `**{video_id}** (score:N) {channel_name} [N views, N likes]` followed by a title, URL, and optional transcript snippet. Count them and include them in your synthesis and stats block.
 
@@ -304,8 +304,8 @@ KEY PATTERNS from the research:
 ✅ All agents reported back!
 ├─ 🟠 Reddit: {N} threads │ {N} upvotes │ {N} comments
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
-├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
+├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
 ├─ 🌐 Web: {N} pages (supplementary)
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
 ---
@@ -475,7 +475,7 @@ After delivering a prompt, end with:
 ```
 ---
 📚 Expert in: {TOPIC} for {TARGET_TOOL}
-📊 Based on: {n} Reddit threads ({sum} upvotes) + {n} X posts ({sum} likes) + {n} HN stories ({sum} points) + {n} YouTube videos ({sum} views) + {n} web pages
+📊 Based on: {n} Reddit threads ({sum} upvotes) + {n} X posts ({sum} likes) + {n} YouTube videos ({sum} views) + {n} HN stories ({sum} points) + {n} web pages
 
 Want another prompt? Just tell me what you're creating next.
 ```

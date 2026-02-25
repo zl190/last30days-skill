@@ -315,14 +315,6 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
         reason = source_info.get("x_skip_reason", "No Bird CLI or XAI_API_KEY")
         lines.append(f"  ⏭️ X: skipped — {reason}")
 
-    # Hacker News
-    if report.hackernews_error:
-        lines.append(f"  ❌ HN: error - {report.hackernews_error}")
-    elif report.hackernews:
-        lines.append(f"  ✅ HN: {len(report.hackernews)} stories")
-    else:
-        lines.append("  ⏭️ HN: 0 stories found")
-
     # YouTube
     if report.youtube_error:
         lines.append(f"  ❌ YouTube: error — {report.youtube_error}")
@@ -332,6 +324,14 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
     else:
         reason = source_info.get("youtube_skip_reason", "yt-dlp not installed (brew install yt-dlp)")
         lines.append(f"  ⏭️ YouTube: skipped — {reason}")
+
+    # Hacker News
+    if report.hackernews_error:
+        lines.append(f"  ❌ HN: error - {report.hackernews_error}")
+    elif report.hackernews:
+        lines.append(f"  ✅ HN: {len(report.hackernews)} stories")
+    else:
+        lines.append("  ⏭️ HN: 0 stories found")
 
     # Web
     if report.web_error:
