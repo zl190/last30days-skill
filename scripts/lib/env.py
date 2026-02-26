@@ -254,6 +254,14 @@ def is_hackernews_available() -> bool:
     return True
 
 
+def is_polymarket_available() -> bool:
+    """Check if Polymarket source is available.
+
+    Always returns True - Gamma API is free, no key needed.
+    """
+    return True
+
+
 def get_x_source_status(config: Dict[str, Any]) -> Dict[str, Any]:
     """Get detailed X source status for UI decisions.
 

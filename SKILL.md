@@ -1,7 +1,7 @@
 ---
 name: last30days
 version: "2.1"
-description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, Hacker News, web. Become an expert and write copy-paste-ready prompts."
+description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
 homepage: https://github.com/mvanhorn/last30days-skill
@@ -32,7 +32,7 @@ metadata:
 
 # last30days v2.1: Research Any Topic from the Last 30 Days
 
-Research ANY topic across Reddit, X, YouTube, Hacker News, and the web. Surface what people are actually discussing, recommending, and debating right now.
+Research ANY topic across Reddit, X, YouTube, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 
 ## CRITICAL: Parse User Intent
 
@@ -141,10 +141,10 @@ Use a **timeout of 300000** (5 minutes) on the Bash call. The script typically t
 
 The script will automatically:
 - Detect available API keys
-- Run Reddit/X/YouTube/Hacker News searches
-- Output ALL results including YouTube transcripts and HN comments
+- Run Reddit/X/YouTube/Hacker News/Polymarket searches
+- Output ALL results including YouTube transcripts, HN comments, and prediction market odds
 
-**Read the ENTIRE output.** It contains FIVE data sections in this order: Reddit items, X items, YouTube items, Hacker News items, and WebSearch items. If you miss sections, you will produce incomplete stats.
+**Read the ENTIRE output.** It contains SIX data sections in this order: Reddit items, X items, YouTube items, Hacker News items, Polymarket items, and WebSearch items. If you miss sections, you will produce incomplete stats.
 
 **YouTube items in the output look like:** `**{video_id}** (score:N) {channel_name} [N views, N likes]` followed by a title, URL, and optional transcript snippet. Count them and include them in your synthesis and stats block.
 
@@ -339,14 +339,13 @@ KEY PATTERNS from the research:
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
 ├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
+├─ 📈 Polymarket: {N} markets │ ${vol} volume │ top odds: {outcome} {pct}%
 ├─ 🌐 Web: {N} pages (supplementary)
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
 ---
 ```
 
-If Reddit returned 0 threads, write: "├─ 🟠 Reddit: 0 threads (no results this cycle)"
-If HN returned 0 stories, write: "├─ 🟡 HN: 0 stories (no results this cycle)"
-If YouTube returned 0 videos or yt-dlp is not installed, omit the YouTube line entirely.
+Omit any source line that returned 0 results. Do NOT show "0 threads" or "0 stories" lines.
 NEVER use plain text dashes (-) or pipe (|). ALWAYS use ├─ └─ │ and the emoji.
 
 **SELF-CHECK before displaying**: Re-read your "What I learned" section. Does it match what the research ACTUALLY says? If you catch yourself projecting your own knowledge instead of the research, rewrite it.
@@ -521,6 +520,7 @@ Want another prompt? Just tell me what you're creating next.
 - Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery
 - Sends search queries to Twitter's GraphQL API (via browser cookie auth) or xAI's API (`api.x.ai`) for X search
 - Sends search queries to Algolia HN Search API (`hn.algolia.com`) for Hacker News story and comment discovery (free, no auth)
+- Sends search queries to Polymarket Gamma API (`gamma-api.polymarket.com`) for prediction market discovery (free, no auth)
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics
@@ -532,7 +532,7 @@ Want another prompt? Just tell me what you're creating next.
 - Does not share API keys between providers (OpenAI key only goes to api.openai.com, etc.)
 - Does not log, cache, or write API keys to output files
 - Does not send data to any endpoint not listed above
-- Hacker News source is always available (no API key, no binary dependency)
+- Hacker News and Polymarket sources are always available (no API key, no binary dependency)
 - Cannot be invoked autonomously by the agent (`disable-model-invocation: true`)
 
 **Bundled scripts:** `scripts/last30days.py` (main research engine), `scripts/lib/` (search, enrichment, rendering modules), `scripts/lib/vendor/bird-search/` (vendored X search client, MIT licensed)

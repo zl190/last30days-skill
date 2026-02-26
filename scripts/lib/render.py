@@ -26,6 +26,8 @@ def _xref_tag(item) -> str:
             source_names.add('YouTube')
         elif ref_id.startswith('HN'):
             source_names.add('HN')
+        elif ref_id.startswith('PM'):
+            source_names.add('Polymarket')
         elif ref_id.startswith('W'):
             source_names.add('Web')
     if source_names:
@@ -53,9 +55,10 @@ def _assess_data_freshness(report: schema.Report) -> dict:
     x_recent = sum(1 for x in report.x if x.date and x.date >= report.range_from)
     web_recent = sum(1 for w in report.web if w.date and w.date >= report.range_from)
     hn_recent = sum(1 for h in report.hackernews if h.date and h.date >= report.range_from)
+    pm_recent = sum(1 for p in report.polymarket if p.date and p.date >= report.range_from)
 
-    total_recent = reddit_recent + x_recent + web_recent + hn_recent
-    total_items = len(report.reddit) + len(report.x) + len(report.web) + len(report.hackernews)
+    total_recent = reddit_recent + x_recent + web_recent + hn_recent + pm_recent
+    total_items = len(report.reddit) + len(report.x) + len(report.web) + len(report.hackernews) + len(report.polymarket)
 
     return {
         "reddit_recent": reddit_recent,
@@ -276,6 +279,59 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
 
             lines.append("")
 
+    # Polymarket items
+    if report.polymarket_error:
+        lines.append("### Prediction Markets (Polymarket)")
+        lines.append("")
+        lines.append(f"**ERROR:** {report.polymarket_error}")
+        lines.append("")
+    elif report.polymarket:
+        lines.append("### Prediction Markets (Polymarket)")
+        lines.append("")
+        for item in report.polymarket[:limit]:
+            eng_str = ""
+            if item.engagement:
+                eng = item.engagement
+                parts = []
+                if eng.volume is not None:
+                    if eng.volume >= 1_000_000:
+                        parts.append(f"${eng.volume/1_000_000:.1f}M vol24h")
+                    elif eng.volume >= 1_000:
+                        parts.append(f"${eng.volume/1_000:.0f}K vol24h")
+                    else:
+                        parts.append(f"${eng.volume:.0f} vol24h")
+                if eng.liquidity is not None:
+                    if eng.liquidity >= 1_000_000:
+                        parts.append(f"${eng.liquidity/1_000_000:.1f}M liquidity")
+                    elif eng.liquidity >= 1_000:
+                        parts.append(f"${eng.liquidity/1_000:.0f}K liquidity")
+                    else:
+                        parts.append(f"${eng.liquidity:.0f} liquidity")
+                if parts:
+                    eng_str = f" [{', '.join(parts)}]"
+
+            date_str = f" ({item.date})" if item.date else ""
+
+            lines.append(f"**{item.id}** (score:{item.score}){eng_str}{_xref_tag(item)}")
+            lines.append(f"  {item.question}")
+
+            # Outcome prices with price movement
+            if item.outcome_prices:
+                outcomes = []
+                for name, price in item.outcome_prices:
+                    pct = price * 100
+                    outcomes.append(f"{name}: {pct:.0f}%")
+                outcome_line = " | ".join(outcomes)
+                if item.outcomes_remaining > 0:
+                    outcome_line += f" and {item.outcomes_remaining} more"
+                if item.price_movement:
+                    outcome_line += f" ({item.price_movement})"
+                lines.append(f"  {outcome_line}")
+
+            lines.append(f"  {item.url}")
+            lines.append(f"  *{item.why_relevant}*")
+            lines.append("")
+
     # Web items (if any - populated by the assistant)
     if report.web_error:
         lines.append("### Web Results")
@@ -323,7 +379,7 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
     elif report.reddit:
         lines.append(f"  ✅ Reddit: {len(report.reddit)} threads")
     elif report.mode in ("both", "reddit-only", "all", "reddit-web"):
-        lines.append("  ⚠️ Reddit: 0 threads found")
+        pass  # Hide zero-result sources
     else:
         reason = source_info.get("reddit_skip_reason", "not configured")
         lines.append(f"  ⏭️ Reddit: skipped — {reason}")
@@ -337,7 +393,7 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
             x_line += f" (via @{report.resolved_x_handle} + keyword search)"
         lines.append(x_line)
     elif report.mode in ("both", "x-only", "all", "x-web"):
-        lines.append("  ⚠️ X: 0 posts found")
+        pass  # Hide zero-result sources
     else:
         reason = source_info.get("x_skip_reason", "No Bird CLI or XAI_API_KEY")
         lines.append(f"  ⏭️ X: skipped — {reason}")
@@ -348,17 +404,21 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
     elif report.youtube:
         with_transcripts = sum(1 for v in report.youtube if getattr(v, 'transcript_snippet', None))
         lines.append(f"  ✅ YouTube: {len(report.youtube)} videos ({with_transcripts} with transcripts)")
-    else:
-        reason = source_info.get("youtube_skip_reason", "yt-dlp not installed (brew install yt-dlp)")
-        lines.append(f"  ⏭️ YouTube: skipped — {reason}")
+    # Hide when zero results (no skip reason line needed)
 
     # Hacker News
     if report.hackernews_error:
         lines.append(f"  ❌ HN: error - {report.hackernews_error}")
     elif report.hackernews:
         lines.append(f"  ✅ HN: {len(report.hackernews)} stories")
-    else:
-        lines.append("  ⏭️ HN: 0 stories found")
+    # Hide when zero results
+
+    # Polymarket
+    if report.polymarket_error:
+        lines.append(f"  ❌ Polymarket: error - {report.polymarket_error}")
+    elif report.polymarket:
+        lines.append(f"  ✅ Polymarket: {len(report.polymarket)} markets")
+    # Hide when zero results
 
     # Web
     if report.web_error:
@@ -399,6 +459,8 @@ def render_context_snippet(report: schema.Report) -> str:
         all_items.append((item.score, "X", item.text[:50] + "...", item.url))
     for item in report.hackernews[:5]:
         all_items.append((item.score, "HN", item.title[:50] + "...", item.hn_url))
+    for item in report.polymarket[:5]:
+        all_items.append((item.score, "Polymarket", item.question[:50] + "...", item.url))
     for item in report.web[:5]:
         all_items.append((item.score, "Web", item.title[:50] + "...", item.url))
 
@@ -512,6 +574,29 @@ def render_full_report(report: schema.Report) -> str:
                 lines.append("**Key Insights from Comments:**")
                 for insight in item.comment_insights:
                     lines.append(f"- {insight}")
+
+            lines.append("")
+
+    # Polymarket section
+    if report.polymarket:
+        lines.append("## Prediction Markets (Polymarket)")
+        lines.append("")
+        for item in report.polymarket:
+            lines.append(f"### {item.id}: {item.question}")
+            lines.append("")
+            lines.append(f"- **Event:** {item.title}")
+            lines.append(f"- **URL:** {item.url}")
+            lines.append(f"- **Date:** {item.date or 'Unknown'}")
+            lines.append(f"- **Score:** {item.score}/100")
+
+            if item.outcome_prices:
+                outcomes = [f"{name}: {price*100:.0f}%" for name, price in item.outcome_prices]
+                lines.append(f"- **Outcomes:** {' | '.join(outcomes)}")
+            if item.price_movement:
+                lines.append(f"- **Trend:** {item.price_movement}")
+            if item.engagement:
+                eng = item.engagement
+                lines.append(f"- **Volume:** ${eng.volume or 0:,.0f} | Liquidity: ${eng.liquidity or 0:,.0f}")
 
             lines.append("")
 

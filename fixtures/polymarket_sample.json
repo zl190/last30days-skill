@@ -1,0 +1,150 @@
+{
+  "events": [
+    {
+      "id": "evt-arizona-big12",
+      "title": "Will Arizona win the Big 12 Championship?",
+      "slug": "arizona-big-12-championship",
+      "active": true,
+      "closed": false,
+      "updatedAt": "2026-02-24T18:30:00.000Z",
+      "markets": [
+        {
+          "id": "mkt-arizona-big12-1",
+          "question": "Will Arizona win the Big 12 Championship?",
+          "active": true,
+          "closed": false,
+          "outcomes": "[\"Yes\", \"No\"]",
+          "outcomePrices": "[\"0.64\", \"0.36\"]",
+          "volume": "1500000",
+          "volume24hr": "342000",
+          "liquidity": "2100000",
+          "oneDayPriceChange": 0.03,
+          "oneWeekPriceChange": 0.225,
+          "oneMonthPriceChange": 0.15,
+          "endDate": "2026-03-15T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "evt-arizona-ncaa",
+      "title": "Will Arizona win the NCAA Tournament?",
+      "slug": "arizona-ncaa-tournament",
+      "active": true,
+      "closed": false,
+      "updatedAt": "2026-02-23T12:00:00.000Z",
+      "markets": [
+        {
+          "id": "mkt-arizona-ncaa-1",
+          "question": "Will Arizona win the NCAA Tournament?",
+          "active": true,
+          "closed": false,
+          "outcomes": "[\"Yes\", \"No\"]",
+          "outcomePrices": "[\"0.12\", \"0.88\"]",
+          "volume": "800000",
+          "volume24hr": "89000",
+          "liquidity": "450000",
+          "oneDayPriceChange": -0.005,
+          "oneWeekPriceChange": -0.02,
+          "oneMonthPriceChange": -0.117,
+          "endDate": "2026-04-07T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "evt-closed-resolved",
+      "title": "Resolved Event (should be filtered)",
+      "slug": "resolved-event",
+      "active": true,
+      "closed": true,
+      "updatedAt": "2026-02-20T10:00:00.000Z",
+      "markets": [
+        {
+          "id": "mkt-resolved-1",
+          "question": "Already resolved?",
+          "active": true,
+          "closed": true,
+          "outcomes": "[\"Yes\", \"No\"]",
+          "outcomePrices": "[\"1\", \"0\"]",
+          "volume": "500000",
+          "volume24hr": "0",
+          "liquidity": "0",
+          "oneDayPriceChange": 0,
+          "oneWeekPriceChange": 0,
+          "oneMonthPriceChange": 0
+        }
+      ]
+    },
+    {
+      "id": "evt-multi-outcome",
+      "title": "Who will win the Big 12 Tournament?",
+      "slug": "big-12-tournament-winner",
+      "active": true,
+      "closed": false,
+      "updatedAt": "2026-02-24T20:00:00.000Z",
+      "markets": [
+        {
+          "id": "mkt-multi-1",
+          "question": "Who will win the Big 12 Tournament?",
+          "active": true,
+          "closed": false,
+          "outcomes": "[\"Arizona\", \"Kansas\", \"Houston\", \"Iowa State\", \"BYU\"]",
+          "outcomePrices": "[\"0.35\", \"0.22\", \"0.18\", \"0.15\", \"0.10\"]",
+          "volume": "2000000",
+          "volume24hr": "150000",
+          "liquidity": "1800000",
+          "oneDayPriceChange": 0.05,
+          "oneWeekPriceChange": 0.08,
+          "oneMonthPriceChange": 0.12
+        }
+      ]
+    },
+    {
+      "id": "evt-no-liquidity",
+      "title": "Dead market (no liquidity)",
+      "slug": "dead-market",
+      "active": true,
+      "closed": false,
+      "updatedAt": "2026-02-10T00:00:00.000Z",
+      "markets": [
+        {
+          "id": "mkt-dead-1",
+          "question": "Dead market?",
+          "active": true,
+          "closed": false,
+          "outcomes": "[\"Yes\", \"No\"]",
+          "outcomePrices": "[\"0.50\", \"0.50\"]",
+          "volume": "100",
+          "volume24hr": "0",
+          "liquidity": "0",
+          "oneDayPriceChange": 0,
+          "oneWeekPriceChange": 0,
+          "oneMonthPriceChange": 0
+        }
+      ]
+    },
+    {
+      "id": "evt-malformed",
+      "title": "Malformed prices",
+      "slug": "malformed-prices",
+      "active": true,
+      "closed": false,
+      "updatedAt": "2026-02-22T08:00:00.000Z",
+      "markets": [
+        {
+          "id": "mkt-malformed-1",
+          "question": "Malformed outcomes?",
+          "active": true,
+          "closed": false,
+          "outcomes": "not valid json",
+          "outcomePrices": "also not valid json",
+          "volume": "50000",
+          "volume24hr": "5000",
+          "liquidity": "30000",
+          "oneDayPriceChange": 0,
+          "oneWeekPriceChange": 0,
+          "oneMonthPriceChange": 0
+        }
+      ]
+    }
+  ]
+}

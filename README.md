@@ -1,18 +1,18 @@
 # /last30days v2.5
 
-**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, Hacker News, and the web from the last 30 days, finds what the community is actually upvoting, sharing, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
+**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, Hacker News, Polymarket, and the web from the last 30 days, finds what the community is actually upvoting, sharing, betting on, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
 
 **New in V2.5 - dramatically better results:**
 
 1. **Smarter scoring across the board.** New relevance scoring with synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), cross-source linking that flags when the same story trends on multiple platforms simultaneously, and X handle resolution that finds viral posts keyword search completely misses. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1 across 5 test topics.
-2. **Hacker News as a 5th source.** HN stories, Show HN posts, and comment threads are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web.
+2. **Hacker News and Polymarket as new sources.** HN stories, Show HN posts, and prediction market odds are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web. Polymarket surfaces what people are putting real money on - betting odds reflect conviction, not just opinions.
 3. **X handle resolution.** Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly - finding their 5,600-like viral tweet that keyword search missed entirely. Works for people, brands, products, and tools.
 
 **New in V2.1:** Open-class skill with watchlists, YouTube transcripts as a source, works in OpenAI Codex CLI. [Full changelog below.](#whats-new-in-v21)
 
 **New in V2:** Smarter query construction, two-phase supplemental search, free X search via bundled Bird client, `--days=N` flag, automatic model fallback. [Full changelog below.](#whats-new-in-v2)
 
-**The tradeoff:** /last30days finds a lot of content but takes 2-8 minutes depending on how niche your topic is. Five sources searched in parallel, results scored, deduplicated, and synthesized. We think the depth is worth the wait, but `--quick` mode is there if you need speed over thoroughness.
+**The tradeoff:** /last30days finds a lot of content but takes 2-8 minutes depending on how niche your topic is. Six sources searched in parallel, results scored, deduplicated, and synthesized. We think the depth is worth the wait, but `--quick` mode is there if you need speed over thoroughness.
 
 **Best for prompt research**: discover what prompting techniques actually work for any tool (ChatGPT, Midjourney, Claude, Paper, etc.) by learning from real community discussions and best practices.
 
@@ -122,7 +122,7 @@ Examples:
 
 ## What It Does
 
-1. **Researches** - Scans Reddit, X, and YouTube for discussions from the last 30 days
+1. **Researches** - Scans Reddit, X, YouTube, Hacker News, Polymarket, and the web for discussions from the last 30 days
 2. **Synthesizes** - Identifies patterns, best practices, and what actually works
 3. **Delivers** - Either writes copy-paste-ready prompts for your target tool, or gives you a curated expert-level answer
 
@@ -857,7 +857,7 @@ This example shows /last30days discovering **emerging developer workflows** - re
 - **Node.js 22+** - For X search (bundled Twitter GraphQL client)
 - **X session** - Be logged into x.com in your browser, or set `AUTH_TOKEN`/`CT0` env vars
 - **xAI API key** (optional fallback) - If the bundled search can't authenticate, falls back to xAI's Grok API
-- **yt-dlp** (optional) - For YouTube search + transcript extraction. Install via `brew install yt-dlp` or `pip install yt-dlp`. When present, automatically searches YouTube and extracts video transcripts as a 4th source.
+- **yt-dlp** (optional) - For YouTube search + transcript extraction. Install via `brew install yt-dlp` or `pip install yt-dlp`. When present, automatically searches YouTube and extracts video transcripts as an additional source.
 
 At least one API key is required. X search works automatically if you're logged into x.com in your browser. YouTube search activates automatically when yt-dlp is in your PATH.
 
@@ -869,6 +869,8 @@ At least one API key is required. X search works automatically if you're logged 
 - OpenAI Responses API with `web_search` tool scoped to reddit.com
 - Vendored Twitter GraphQL search (or xAI API fallback) for X search
 - YouTube search + transcript extraction via yt-dlp (when installed)
+- Hacker News search via Algolia API (free, no auth)
+- Polymarket prediction market search via Gamma API (free, no auth)
 - WebSearch for blogs, news, docs, tutorials
 - Reddit JSON enrichment for real engagement metrics (upvotes, comments)
 - Scoring algorithm weighing recency, relevance, and engagement
@@ -913,13 +915,21 @@ Ran a 15-way blinded comparison across 5 topics (Claude Code, Seedance, MacBook 
 
 Scored on groundedness (30%), specificity (25%), coverage (20%), actionability (15%), format (10%). The relative ranking is meaningful; absolute numbers are LLM-grading-LLM and shouldn't be taken as objective quality scores. The biggest gains came from detecting where sources agree - not just finding more sources.
 
-### Hacker News as a 5th source
+### Hacker News as a source
 
 **The technical community's signal, captured automatically.** HN stories, Show HN posts, and Ask HN threads are searched, scored by points + comments, and synthesized alongside Reddit, X, YouTube, and the web. Comment insights are extracted from top threads to surface the technical community's actual take - not just headlines.
 
 HN items go through the same scoring pipeline as every other source and participate in cross-source linking. When the same topic appears on HN AND Reddit AND YouTube, that convergence gets flagged.
 
 Inspired by community PRs from [@ARJ999](https://github.com/ARJ999) ([#12](https://github.com/mvanhorn/last30days-skill/pull/12)) and [@wkbaran](https://github.com/wkbaran) ([#26](https://github.com/mvanhorn/last30days-skill/pull/26)), with [@gbessoni](https://github.com/gbessoni) endorsing HN as the right addition.
+
+### Polymarket prediction markets as a source
+
+**What people are putting real money on.** Polymarket prediction markets are searched for any topic, surfacing betting odds and price movements alongside what people are saying on Reddit/X/YouTube/HN. Search "Iran" and you'll find markets on US strikes, Khamenei's future, and nuclear negotiations - with live odds and volume.
+
+Uses smart multi-query expansion (same approach as YouTube synonym expansion and X handle resolution) to cast a wider net. "Arizona Basketball" finds markets on Big 12 title odds, NCAA tournament seeding, and March Madness outcomes - not just literal keyword matches.
+
+No API key required - uses Polymarket's free public Gamma API. Sources with zero results are automatically hidden from the stats output.
 
 ### X handle resolution details
 
@@ -1014,6 +1024,7 @@ Thanks to the contributors who helped shape V2:
 | Twitter GraphQL / `api.x.ai` | Search query | Browser cookies or XAI_API_KEY |
 | `youtube.com` (via yt-dlp) | Search query | None (public search) |
 | `hn.algolia.com` | Search query | None (public API) |
+| `gamma-api.polymarket.com` | Search query | None (public API) |
 | `api.search.brave.com` | Search query (optional) | BRAVE_API_KEY |
 | `api.parallel.ai` | Search query (optional) | PARALLEL_API_KEY |
 | `openrouter.ai` | Search query (optional) | OPENROUTER_API_KEY |
@@ -1032,6 +1043,6 @@ Each API key is transmitted only to its respective endpoint. Your OpenAI key is 
 
 ---
 
-*30 days of research. 30 seconds of work. Four sources. Zero stale prompts.*
+*30 days of research. 30 seconds of work. Six sources. Zero stale prompts.*
 
 *Pair with [Open Claw](https://github.com/openclaw/openclaw) for automated watchlists and briefings. Reddit. X. YouTube. Web.  - All synthesized into expert answers and copy-paste prompts.*

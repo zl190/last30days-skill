@@ -22,6 +22,10 @@ class Engagement:
     # YouTube fields
     views: Optional[int] = None
 
+    # Polymarket fields
+    volume: Optional[float] = None
+    liquidity: Optional[float] = None
+
     def to_dict(self) -> Dict[str, Any]:
         d = {}
         if self.score is not None:
@@ -40,6 +44,10 @@ class Engagement:
             d['quotes'] = self.quotes
         if self.views is not None:
             d['views'] = self.views
+        if self.volume is not None:
+            d['volume'] = self.volume
+        if self.liquidity is not None:
+            d['liquidity'] = self.liquidity
         return d if d else None
 
 
@@ -265,6 +273,49 @@ class HackerNewsItem:
 
 
 @dataclass
+class PolymarketItem:
+    """Normalized Polymarket prediction market item."""
+    id: str           # "PM1", "PM2", ...
+    title: str        # Event title
+    question: str     # Top market question
+    url: str          # Event page URL
+    outcome_prices: List[tuple] = field(default_factory=list)  # [(name, price), ...]
+    outcomes_remaining: int = 0
+    price_movement: Optional[str] = None  # "down 11.7% this month"
+    date: Optional[str] = None
+    date_confidence: str = "high"  # API provides exact timestamps
+    engagement: Optional[Engagement] = None  # volume + liquidity
+    end_date: Optional[str] = None
+    relevance: float = 0.5
+    why_relevant: str = ""
+    subs: SubScores = field(default_factory=SubScores)
+    score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {
+            'id': self.id,
+            'title': self.title,
+            'question': self.question,
+            'url': self.url,
+            'outcome_prices': self.outcome_prices,
+            'outcomes_remaining': self.outcomes_remaining,
+            'price_movement': self.price_movement,
+            'date': self.date,
+            'date_confidence': self.date_confidence,
+            'engagement': self.engagement.to_dict() if self.engagement else None,
+            'end_date': self.end_date,
+            'relevance': self.relevance,
+            'why_relevant': self.why_relevant,
+            'subs': self.subs.to_dict(),
+            'score': self.score,
+        }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
+
+
+@dataclass
 class Report:
     """Full research report."""
     topic: str
@@ -279,6 +330,7 @@ class Report:
     web: List[WebSearchItem] = field(default_factory=list)
     youtube: List[YouTubeItem] = field(default_factory=list)
     hackernews: List[HackerNewsItem] = field(default_factory=list)
+    polymarket: List[PolymarketItem] = field(default_factory=list)
     best_practices: List[str] = field(default_factory=list)
     prompt_pack: List[str] = field(default_factory=list)
     context_snippet_md: str = ""
@@ -288,6 +340,7 @@ class Report:
     web_error: Optional[str] = None
     youtube_error: Optional[str] = None
     hackernews_error: Optional[str] = None
+    polymarket_error: Optional[str] = None
     # Handle resolution
     resolved_x_handle: Optional[str] = None
     # Cache info
@@ -310,6 +363,7 @@ class Report:
             'web': [w.to_dict() for w in self.web],
             'youtube': [y.to_dict() for y in self.youtube],
             'hackernews': [h.to_dict() for h in self.hackernews],
+            'polymarket': [p.to_dict() for p in self.polymarket],
             'best_practices': self.best_practices,
             'prompt_pack': self.prompt_pack,
             'context_snippet_md': self.context_snippet_md,
@@ -326,6 +380,8 @@ class Report:
             d['youtube_error'] = self.youtube_error
         if self.hackernews_error:
             d['hackernews_error'] = self.hackernews_error
+        if self.polymarket_error:
+            d['polymarket_error'] = self.polymarket_error
         if self.from_cache:
             d['from_cache'] = self.from_cache
         if self.cache_age_hours is not None:
@@ -455,6 +511,32 @@ class Report:
                 cross_refs=h.get('cross_refs', []),
             ))
 
+        # Reconstruct Polymarket items (backward compat: key may not exist)
+        pm_items = []
+        for p in data.get('polymarket', []):
+            eng = None
+            if p.get('engagement'):
+                eng = Engagement(**p['engagement'])
+            subs = SubScores(**p.get('subs', {})) if p.get('subs') else SubScores()
+            pm_items.append(PolymarketItem(
+                id=p['id'],
+                title=p['title'],
+                question=p.get('question', ''),
+                url=p['url'],
+                outcome_prices=p.get('outcome_prices', []),
+                outcomes_remaining=p.get('outcomes_remaining', 0),
+                price_movement=p.get('price_movement'),
+                date=p.get('date'),
+                date_confidence=p.get('date_confidence', 'high'),
+                engagement=eng,
+                end_date=p.get('end_date'),
+                relevance=p.get('relevance', 0.5),
+                why_relevant=p.get('why_relevant', ''),
+                subs=subs,
+                score=p.get('score', 0),
+                cross_refs=p.get('cross_refs', []),
+            ))
+
         return cls(
             topic=data['topic'],
             range_from=range_from,
@@ -468,6 +550,7 @@ class Report:
             web=web_items,
             youtube=youtube_items,
             hackernews=hn_items,
+            polymarket=pm_items,
             best_practices=data.get('best_practices', []),
             prompt_pack=data.get('prompt_pack', []),
             context_snippet_md=data.get('context_snippet_md', ''),
@@ -476,6 +559,7 @@ class Report:
             web_error=data.get('web_error'),
             youtube_error=data.get('youtube_error'),
             hackernews_error=data.get('hackernews_error'),
+            polymarket_error=data.get('polymarket_error'),
             resolved_x_handle=data.get('resolved_x_handle'),
             from_cache=data.get('from_cache', False),
             cache_age_hours=data.get('cache_age_hours'),

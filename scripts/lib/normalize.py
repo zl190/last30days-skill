@@ -4,7 +4,7 @@ from typing import Any, Dict, List, TypeVar, Union
 
 from . import dates, schema
 
-T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.HackerNewsItem)
+T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.HackerNewsItem, schema.PolymarketItem)
 
 
 def filter_by_date_range(
@@ -250,6 +250,50 @@ def normalize_hackernews_items(
             engagement=engagement,
             top_comments=top_comments,
             comment_insights=item.get("comment_insights", []),
+            relevance=item.get("relevance", 0.5),
+            why_relevant=item.get("why_relevant", ""),
+        ))
+
+    return normalized
+
+
+def normalize_polymarket_items(
+    items: List[Dict[str, Any]],
+    from_date: str,
+    to_date: str,
+) -> List[schema.PolymarketItem]:
+    """Normalize raw Polymarket items to schema.
+
+    Args:
+        items: Raw Polymarket items from Gamma API
+        from_date: Start of date range
+        to_date: End of date range
+
+    Returns:
+        List of PolymarketItem objects
+    """
+    normalized = []
+
+    for i, item in enumerate(items):
+        engagement = schema.Engagement(
+            volume=item.get("volume24hr", 0.0),
+            liquidity=item.get("liquidity", 0.0),
+        )
+
+        date_str = item.get("date")
+
+        normalized.append(schema.PolymarketItem(
+            id=f"PM{i+1}",
+            title=item.get("title", ""),
+            question=item.get("question", ""),
+            url=item.get("url", ""),
+            outcome_prices=item.get("outcome_prices", []),
+            outcomes_remaining=item.get("outcomes_remaining", 0),
+            price_movement=item.get("price_movement"),
+            date=date_str,
+            date_confidence="high",
+            engagement=engagement,
+            end_date=item.get("end_date"),
             relevance=item.get("relevance", 0.5),
             why_relevant=item.get("why_relevant", ""),
         ))

@@ -1,6 +1,6 @@
 # One-Shot Research Mode
 
-Research ANY topic across Reddit, X, YouTube, and the web. Surface what people are actually discussing, recommending, and debating right now.
+Research ANY topic across Reddit, X, YouTube, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 
 ## Parse User Intent
 
@@ -19,7 +19,7 @@ Before doing anything, parse the user's input for:
 **Display your parsing** before calling tools:
 
 ```
-I'll research {TOPIC} across Reddit, X, YouTube, and the web.
+I'll research {TOPIC} across Reddit, X, YouTube, Polymarket, and the web.
 
 Parsed intent:
 - TOPIC = {TOPIC}
@@ -128,10 +128,13 @@ All agents reported back!
 |- Reddit: {N} threads | {N} upvotes | {N} comments
 |- X: {N} posts | {N} likes | {N} reposts
 |- YouTube: {N} videos | {N} views | {N} with transcripts
+|- Polymarket: {N} markets | top odds: {outcome} {pct}%
 |- Web: {N} pages (supplementary)
 |- Top voices: @{handle1}, @{handle2} | r/{sub1}, r/{sub2}
 ---
 ```
+
+Omit any source line that returned 0 results.
 
 **3. Invitation** with 2-3 specific follow-up suggestions based on research.
 

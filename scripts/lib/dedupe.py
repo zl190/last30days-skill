@@ -46,7 +46,7 @@ def jaccard_similarity(set1: Set[str], set2: Set[str]) -> float:
 
 
 AnyItem = Union[schema.RedditItem, schema.XItem, schema.YouTubeItem,
-                schema.HackerNewsItem, schema.WebSearchItem]
+                schema.HackerNewsItem, schema.PolymarketItem, schema.WebSearchItem]
 
 
 def get_item_text(item: AnyItem) -> str:
@@ -57,6 +57,8 @@ def get_item_text(item: AnyItem) -> str:
         return item.title
     elif isinstance(item, schema.YouTubeItem):
         return f"{item.title} {item.channel_name}"
+    elif isinstance(item, schema.PolymarketItem):
+        return f"{item.title} {item.question}"
     elif isinstance(item, schema.WebSearchItem):
         return item.title
     else:
@@ -79,6 +81,8 @@ def _get_cross_source_text(item: AnyItem) -> str:
         elif title.startswith("Ask HN:"):
             title = title[7:].strip()
         return title
+    if isinstance(item, schema.PolymarketItem):
+        return item.title
     return get_item_text(item)
 
 
@@ -195,6 +199,14 @@ def dedupe_hackernews(
     threshold: float = 0.7,
 ) -> List[schema.HackerNewsItem]:
     """Dedupe Hacker News items."""
+    return dedupe_items(items, threshold)
+
+
+def dedupe_polymarket(
+    items: List[schema.PolymarketItem],
+    threshold: float = 0.7,
+) -> List[schema.PolymarketItem]:
+    """Dedupe Polymarket items."""
     return dedupe_items(items, threshold)
 
 

@@ -116,6 +116,26 @@ class TestCrossSourceLink(unittest.TestCase):
         self.assertIn("HN1", web[0].cross_refs)
         self.assertIn("W1", hn[0].cross_refs)
 
+    def _make_pm(self, id, title, score=50):
+        item = schema.PolymarketItem(id=id, title=title, question="Q?", url="")
+        item.score = score
+        return item
+
+    def test_polymarket_to_reddit_link(self):
+        reddit = [self._make_reddit("R1", "Will Arizona win the Big 12 Championship?")]
+        pm = [self._make_pm("PM1", "Will Arizona win the Big 12 Championship?")]
+        dedupe.cross_source_link(reddit, pm)
+        self.assertIn("PM1", reddit[0].cross_refs)
+        self.assertIn("R1", pm[0].cross_refs)
+
+    def test_polymarket_multi_source(self):
+        reddit = [self._make_reddit("R1", "Iran nuclear deal prediction markets")]
+        hn = [self._make_hn("HN1", "Iran nuclear deal prediction markets")]
+        pm = [self._make_pm("PM1", "Iran nuclear deal prediction markets")]
+        dedupe.cross_source_link(reddit, hn, pm)
+        self.assertEqual(len(reddit[0].cross_refs), 2)
+        self.assertEqual(len(pm[0].cross_refs), 2)
+
 
 class TestCrossRefsSchemaRoundTrip(unittest.TestCase):
     def test_reddit_roundtrip(self):

@@ -38,9 +38,9 @@ _child_pids: set = set()
 _child_pids_lock = threading.Lock()
 
 TIMEOUT_PROFILES = {
-    "quick":   {"global": 90,  "future": 30, "reddit_future": 60,  "youtube_future": 60,  "hackernews_future": 30,  "http": 15, "enrich_per": 8,  "enrich_total": 30, "enrich_max_items": 10},
-    "default": {"global": 180, "future": 60, "reddit_future": 90,  "youtube_future": 90,  "hackernews_future": 60,  "http": 30, "enrich_per": 15, "enrich_total": 45, "enrich_max_items": 15},
-    "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "hackernews_future": 90,  "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
+    "quick":   {"global": 90,  "future": 30, "reddit_future": 60,  "youtube_future": 60,  "hackernews_future": 30,  "polymarket_future": 15,  "http": 15, "enrich_per": 8,  "enrich_total": 30, "enrich_max_items": 10},
+    "default": {"global": 180, "future": 60, "reddit_future": 90,  "youtube_future": 90,  "hackernews_future": 60,  "polymarket_future": 30,  "http": 30, "enrich_per": 15, "enrich_total": 45, "enrich_max_items": 15},
+    "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "hackernews_future": 90,  "polymarket_future": 45,  "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
 }
 
 
@@ -99,6 +99,7 @@ from lib import (
     dates,
     dedupe,
     hackernews,
+    polymarket,
     entity_extract,
     env,
     http,
@@ -330,6 +331,34 @@ def _search_hackernews(
         hn_error = response["error"]
 
     return hn_items, hn_error
+
+
+def _search_polymarket(
+    topic: str,
+    from_date: str,
+    to_date: str,
+    depth: str,
+) -> tuple:
+    """Search Polymarket via Gamma API (runs in thread).
+
+    Returns:
+        Tuple of (pm_items, pm_error)
+    """
+    pm_error = None
+
+    try:
+        response = polymarket.search_polymarket(
+            topic, from_date, to_date, depth=depth,
+        )
+    except Exception as e:
+        return [], f"{type(e).__name__}: {e}"
+
+    pm_items = polymarket.parse_polymarket_response(response, topic=topic)
+
+    if response.get("error"):
+        pm_error = response["error"]
+
+    return pm_items, pm_error
 
 
 def _search_web(
@@ -588,6 +617,7 @@ def run_research(
     x_items = []
     youtube_items = []
     hackernews_items = []
+    polymarket_items = []
     web_items = []
     raw_openai = None
     raw_xai = None
@@ -596,6 +626,7 @@ def run_research(
     x_error = None
     youtube_error = None
     hackernews_error = None
+    polymarket_error = None
     web_error = None
 
     # Determine web search mode
@@ -638,20 +669,22 @@ def run_research(
                     progress.show_error(f"YouTube error: {e}")
             if progress:
                 progress.end_youtube(len(youtube_items))
-        return reddit_items, x_items, youtube_items, hackernews_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, web_error
+        return reddit_items, x_items, youtube_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, polymarket_error, web_error
 
     # Determine which searches to run
     do_reddit = sources in ("both", "reddit", "all", "reddit-web")
     do_x = sources in ("both", "x", "all", "x-web")
     do_hackernews = True  # HN is always available (no API key)
+    do_polymarket = True  # Polymarket is always available (no API key)
 
-    # Run Reddit, X, YouTube, HN, and Web searches in parallel
+    # Run Reddit, X, YouTube, HN, Polymarket, and Web searches in parallel
     reddit_future = None
     x_future = None
     youtube_future = None
     hackernews_future = None
+    polymarket_future = None
     web_future = None
-    max_workers = 2 + (1 if run_youtube else 0) + (1 if do_hackernews else 0) + (1 if web_backend else 0)
+    max_workers = 2 + (1 if run_youtube else 0) + (1 if do_hackernews else 0) + (1 if do_polymarket else 0) + (1 if web_backend else 0)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit searches
@@ -683,6 +716,13 @@ def run_research(
                 progress.start_hackernews()
             hackernews_future = executor.submit(
                 _search_hackernews, topic, from_date, to_date, depth
+            )
+
+        if do_polymarket:
+            if progress:
+                progress.start_polymarket()
+            polymarket_future = executor.submit(
+                _search_polymarket, topic, from_date, to_date, depth
             )
 
         if web_backend:
@@ -759,6 +799,23 @@ def run_research(
                     progress.show_error(f"HN error: {e}")
             if progress:
                 progress.end_hackernews(len(hackernews_items))
+
+        if polymarket_future:
+            pm_timeout = timeouts.get("polymarket_future", future_timeout)
+            try:
+                polymarket_items, polymarket_error = polymarket_future.result(timeout=pm_timeout)
+                if polymarket_error and progress:
+                    progress.show_error(f"Polymarket error: {polymarket_error}")
+            except TimeoutError:
+                polymarket_error = f"Polymarket search timed out after {pm_timeout}s"
+                if progress:
+                    progress.show_error(polymarket_error)
+            except Exception as e:
+                polymarket_error = f"{type(e).__name__}: {e}"
+                if progress:
+                    progress.show_error(f"Polymarket error: {e}")
+            if progress:
+                progress.end_polymarket(len(polymarket_items))
 
         if web_future:
             try:
@@ -868,7 +925,7 @@ def run_research(
         if sup_x:
             x_items.extend(sup_x)
 
-    return reddit_items, x_items, youtube_items, hackernews_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, web_error
+    return reddit_items, x_items, youtube_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, polymarket_error, web_error
 
 
 def main():
@@ -994,6 +1051,7 @@ def main():
             "bird_username": x_source_status.get("bird_username"),
             "youtube": has_ytdlp,
             "hackernews": True,
+            "polymarket": True,
             "web_search_backend": web_source,
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
             "brave": bool(config.get("BRAVE_API_KEY")),
@@ -1022,6 +1080,7 @@ def main():
         "bird_username": x_source_status.get("bird_username"),
         "youtube": has_ytdlp,
         "hackernews": True,
+        "polymarket": True,
         "web_search_backend": web_source,
     }
     ui.show_diagnostic_banner(diag)
@@ -1099,7 +1158,7 @@ def main():
         mode = sources
 
     # Run research
-    reddit_items, x_items, youtube_items, hackernews_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, web_error = run_research(
+    reddit_items, x_items, youtube_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, polymarket_error, web_error = run_research(
         args.topic,
         sources,
         config,
@@ -1123,6 +1182,7 @@ def main():
     normalized_x = normalize.normalize_x_items(x_items, from_date, to_date)
     normalized_youtube = normalize.normalize_youtube_items(youtube_items, from_date, to_date) if youtube_items else []
     normalized_hn = normalize.normalize_hackernews_items(hackernews_items, from_date, to_date) if hackernews_items else []
+    normalized_pm = normalize.normalize_polymarket_items(polymarket_items, from_date, to_date) if polymarket_items else []
     normalized_web = websearch.normalize_websearch_items(web_items, from_date, to_date) if web_items else []
 
     # Hard date filter: exclude items with verified dates outside the range
@@ -1134,6 +1194,8 @@ def main():
     # YouTube content has a longer shelf life than tweets/posts.
     filtered_youtube = normalized_youtube
     filtered_hn = normalize.filter_by_date_range(normalized_hn, from_date, to_date) if normalized_hn else []
+    # Polymarket: skip hard date filter - markets are active/traded, updatedAt is fine
+    filtered_pm = normalized_pm
     filtered_web = normalize.filter_by_date_range(normalized_web, from_date, to_date) if normalized_web else []
 
     # Score items
@@ -1141,6 +1203,7 @@ def main():
     scored_x = score.score_x_items(filtered_x)
     scored_youtube = score.score_youtube_items(filtered_youtube) if filtered_youtube else []
     scored_hn = score.score_hackernews_items(filtered_hn) if filtered_hn else []
+    scored_pm = score.score_polymarket_items(filtered_pm) if filtered_pm else []
     scored_web = score.score_websearch_items(filtered_web) if filtered_web else []
 
     # Sort items
@@ -1148,6 +1211,7 @@ def main():
     sorted_x = score.sort_items(scored_x)
     sorted_youtube = score.sort_items(scored_youtube) if scored_youtube else []
     sorted_hn = score.sort_items(scored_hn) if scored_hn else []
+    sorted_pm = score.sort_items(scored_pm) if scored_pm else []
     sorted_web = score.sort_items(scored_web) if scored_web else []
 
     # Dedupe items
@@ -1155,6 +1219,7 @@ def main():
     deduped_x = dedupe.dedupe_x(sorted_x)
     deduped_youtube = dedupe.dedupe_youtube(sorted_youtube) if sorted_youtube else []
     deduped_hn = dedupe.dedupe_hackernews(sorted_hn) if sorted_hn else []
+    deduped_pm = dedupe.dedupe_polymarket(sorted_pm) if sorted_pm else []
     deduped_web = websearch.dedupe_websearch(sorted_web) if sorted_web else []
 
     # Minimum result guarantee: if all Reddit results were filtered out but
@@ -1166,7 +1231,7 @@ def main():
 
     # Cross-source linking: annotate items that discuss the same story
     dedupe.cross_source_link(
-        deduped_reddit, deduped_x, deduped_youtube, deduped_hn, deduped_web,
+        deduped_reddit, deduped_x, deduped_youtube, deduped_hn, deduped_pm, deduped_web,
     )
 
     progress.end_processing()
@@ -1184,11 +1249,13 @@ def main():
     report.x = deduped_x
     report.youtube = deduped_youtube
     report.hackernews = deduped_hn
+    report.polymarket = deduped_pm
     report.web = deduped_web
     report.reddit_error = reddit_error
     report.x_error = x_error
     report.youtube_error = youtube_error
     report.hackernews_error = hackernews_error
+    report.polymarket_error = polymarket_error
     report.web_error = web_error
     report.resolved_x_handle = args.x_handle
 
@@ -1202,7 +1269,7 @@ def main():
     if sources == "web":
         progress.show_web_only_complete()
     else:
-        progress.show_complete(len(deduped_reddit), len(deduped_x), len(deduped_youtube), len(deduped_hn))
+        progress.show_complete(len(deduped_reddit), len(deduped_x), len(deduped_youtube), len(deduped_hn), len(deduped_pm))
 
     # Build source info for status footer
     source_info = {}
@@ -1268,6 +1335,16 @@ def main():
                 "author": item.author,
                 "content": item.title,
                 "engagement_score": item.engagement.score if item.engagement else 0,
+                "relevance_score": item.relevance,
+            })
+        for item in deduped_pm:
+            findings.append({
+                "source": "polymarket",
+                "url": item.url,
+                "title": item.question,
+                "author": "polymarket",
+                "content": item.title,
+                "engagement_score": item.engagement.volume if item.engagement and item.engagement.volume else 0,
                 "relevance_score": item.relevance,
             })
         for item in deduped_web:
