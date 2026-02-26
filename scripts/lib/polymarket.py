@@ -233,22 +233,36 @@ def _parse_outcome_prices(market: Dict[str, Any]) -> List[tuple]:
     return result
 
 
-def _compute_text_similarity(topic: str, title: str) -> float:
-    """Score how well the event title matches the search topic.
+def _compute_text_similarity(topic: str, title: str, outcomes: List[str] = None) -> float:
+    """Score how well the event title (or outcome names) match the search topic.
 
-    Returns 0.0-1.0. Substring containment gets full score,
-    token overlap gets proportional score.
+    Returns 0.0-1.0. Title substring match gets 1.0, outcome match gets 0.85/0.7,
+    title token overlap gets proportional score.
     """
     core = _extract_core_subject(topic).lower()
     title_lower = title.lower()
     if not core:
         return 0.5
 
-    # Full substring match
+    # Full substring match in title
     if core in title_lower:
         return 1.0
 
-    # Token overlap fallback
+    # Check if topic appears in any outcome name (bidirectional)
+    if outcomes:
+        core_tokens = set(core.split())
+        best_outcome_score = 0.0
+        for outcome_name in outcomes:
+            outcome_lower = outcome_name.lower()
+            # Bidirectional: "arizona" in "arizona basketball" OR "arizona basketball" contains "arizona"
+            if core in outcome_lower or outcome_lower in core:
+                best_outcome_score = max(best_outcome_score, 0.85)
+            elif core_tokens & set(outcome_lower.split()):
+                best_outcome_score = max(best_outcome_score, 0.7)
+        if best_outcome_score > 0:
+            return best_outcome_score
+
+    # Token overlap fallback against title
     topic_tokens = set(core.split())
     title_tokens = set(title_lower.split())
     if not topic_tokens:
@@ -325,6 +339,14 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
         # Take top market for the event
         top_market = active_markets[0]
 
+        # Collect outcome names from ALL active markets (not just top) for similarity scoring
+        # Filter to outcomes with price > 1% to avoid noise
+        all_outcome_names = []
+        for m in active_markets:
+            for name, price in _parse_outcome_prices(m):
+                if price > 0.01 and name not in all_outcome_names:
+                    all_outcome_names.append(name)
+
         # Parse outcome prices from top market
         outcome_prices = _parse_outcome_prices(top_market)
 
@@ -360,7 +382,7 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
                 end_date = None
 
         # Quality-signal relevance (replaces position-based decay)
-        text_score = _compute_text_similarity(topic, title) if topic else 0.5
+        text_score = _compute_text_similarity(topic, title, all_outcome_names) if topic else 0.5
 
         # Volume signal: log-scaled monthly volume (most stable signal)
         vol_raw = event_volume1mo or event_volume1wk or volume24hr
@@ -386,6 +408,20 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
             0.15 * movement_score +
             0.10 * competitive_score
         ))
+
+        # Surface the topic-matching outcome to the front before truncating
+        if topic and outcome_prices:
+            core = _extract_core_subject(topic).lower()
+            reordered = []
+            rest = []
+            for pair in outcome_prices:
+                name_lower = pair[0].lower()
+                if core in name_lower or name_lower in core:
+                    reordered.append(pair)
+                else:
+                    rest.append(pair)
+            if reordered:
+                outcome_prices = reordered + rest
 
         # Top 3 outcomes for multi-outcome markets
         top_outcomes = outcome_prices[:3]

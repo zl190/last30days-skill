@@ -85,6 +85,7 @@ Rules:
 3. Weight web LOWER (no engagement data)
 4. Identify cross-source patterns (strongest signals)
 5. Extract top 3-5 actionable insights
+6. **Prediction markets are high-signal when relevant** - real money on outcomes cuts through opinion. Prefer structural/long-term markets (championship > regular season, regime change > near-term deadline). When the topic is an outcome in a multi-outcome market, call out that specific outcome's odds and movement. Weave odds into narrative: "Polymarket has X at Y% (up/down Z%)"
 
 **Ground synthesis in ACTUAL research, not pre-existing knowledge.**
 
@@ -128,7 +129,7 @@ All agents reported back!
 |- Reddit: {N} threads | {N} upvotes | {N} comments
 |- X: {N} posts | {N} likes | {N} reposts
 |- YouTube: {N} videos | {N} views | {N} with transcripts
-|- Polymarket: {N} markets ({short summary of top 2-3 market odds})
+|- Polymarket: {N} markets | {summary of up to 5 most relevant market odds}
 |- Web: {N} pages (supplementary)
 |- Top voices: @{handle1}, @{handle2} | r/{sub1}, r/{sub2}
 ---

@@ -295,11 +295,11 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
                 parts = []
                 if eng.volume is not None:
                     if eng.volume >= 1_000_000:
-                        parts.append(f"${eng.volume/1_000_000:.1f}M vol24h")
+                        parts.append(f"${eng.volume/1_000_000:.1f}M volume")
                     elif eng.volume >= 1_000:
-                        parts.append(f"${eng.volume/1_000:.0f}K vol24h")
+                        parts.append(f"${eng.volume/1_000:.0f}K volume")
                     else:
-                        parts.append(f"${eng.volume:.0f} vol24h")
+                        parts.append(f"${eng.volume:.0f} volume")
                 if eng.liquidity is not None:
                     if eng.liquidity >= 1_000_000:
                         parts.append(f"${eng.liquidity/1_000_000:.1f}M liquidity")

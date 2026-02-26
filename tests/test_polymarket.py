@@ -507,6 +507,79 @@ class TestTextSimilarity(unittest.TestCase):
         score = polymarket._compute_text_similarity("last 7 days Arizona", "Will Arizona win?")
         self.assertEqual(score, 1.0)
 
+    def test_outcome_substring_match(self):
+        """Topic 'Arizona' should match outcome 'Arizona' even when title has no overlap."""
+        score = polymarket._compute_text_similarity(
+            "Arizona",
+            "Who will be the #1 overall seed?",
+            outcomes=["Duke", "Arizona", "Houston"],
+        )
+        self.assertEqual(score, 0.85)
+
+    def test_outcome_bidirectional_match(self):
+        """Topic 'Arizona Basketball' should match outcome 'Arizona' (outcome in core)."""
+        score = polymarket._compute_text_similarity(
+            "Arizona Basketball",
+            "Who will be the #1 overall seed?",
+            outcomes=["Duke", "Arizona", "Houston"],
+        )
+        self.assertEqual(score, 0.85)
+
+    def test_outcome_token_overlap(self):
+        """Partial token overlap with outcome gets 0.7 when no substring match."""
+        score = polymarket._compute_text_similarity(
+            "Iran War",
+            "Unrelated geopolitics title",
+            outcomes=["War continues", "Peace deal"],
+        )
+        self.assertEqual(score, 0.7)
+
+    def test_outcome_no_match(self):
+        """No outcome match falls through to title token overlap."""
+        score = polymarket._compute_text_similarity(
+            "Arizona Basketball",
+            "Will AI regulation pass in 2026?",
+            outcomes=["Yes", "No"],
+        )
+        self.assertEqual(score, 0.0)
+
+    def test_outcome_low_price_filtered_by_caller(self):
+        """Outcomes with price <= 1% should be filtered by the caller, not this function."""
+        # This function doesn't filter - it trusts the caller to pass only relevant outcomes
+        score = polymarket._compute_text_similarity(
+            "Arizona",
+            "Unrelated title",
+            outcomes=["Arizona"],
+        )
+        self.assertEqual(score, 0.85)
+
+    def test_title_match_still_beats_outcome(self):
+        """Title substring match (1.0) takes priority over outcome match (0.85)."""
+        score = polymarket._compute_text_similarity(
+            "Arizona",
+            "Will Arizona win the tournament?",
+            outcomes=["Arizona", "Duke"],
+        )
+        self.assertEqual(score, 1.0)
+
+    def test_empty_outcomes(self):
+        """Empty outcomes list falls through to title token overlap."""
+        score = polymarket._compute_text_similarity(
+            "Arizona Basketball",
+            "Unrelated title",
+            outcomes=[],
+        )
+        self.assertEqual(score, 0.0)
+
+    def test_none_outcomes(self):
+        """None outcomes falls through to title token overlap."""
+        score = polymarket._compute_text_similarity(
+            "Arizona Basketball",
+            "Unrelated title",
+            outcomes=None,
+        )
+        self.assertEqual(score, 0.0)
+
 
 class TestQualityRanking(unittest.TestCase):
     """Verify quality-signal ranking: high-volume matching events rank above tangential ones."""
@@ -520,22 +593,23 @@ class TestQualityRanking(unittest.TestCase):
         """Arizona markets should rank above AI regulation when topic is 'Arizona Basketball'."""
         items = polymarket.parse_polymarket_response(self.sample, topic="Arizona Basketball")
         titles = [item["title"] for item in items]
-        # Arizona events should come before tangential AI regulation event
-        arizona_indices = [i for i, t in enumerate(titles) if "Arizona" in t or "Big 12" in t]
+        # Arizona events (including outcome-matched ones like NCAA seed) should come before tangential
+        arizona_indices = [i for i, t in enumerate(titles) if "Arizona" in t or "Big 12" in t or "NCAA" in t]
         tangential_indices = [i for i, t in enumerate(titles) if "AI regulation" in t]
         if tangential_indices:
             self.assertTrue(max(arizona_indices) < min(tangential_indices),
                 f"Arizona markets should rank above tangential. Order: {titles}")
 
     def test_high_volume_ranks_above_low_volume(self):
-        """Among matching events, higher volume should rank higher."""
+        """Among title-matched events, higher volume should rank higher."""
         items = polymarket.parse_polymarket_response(self.sample, topic="Arizona Basketball")
-        # Arizona Big 12 has $3.5M monthly volume, Arizona NCAA has $800K
+        # Arizona Big 12 Championship has $3.5M monthly volume, Arizona NCAA Tournament has $800K
+        # Both have "Arizona" in the title (text_score=1.0), so volume breaks the tie
         big12 = [i for i, item in enumerate(items) if "Big 12 Championship" in item["title"]]
-        ncaa = [i for i, item in enumerate(items) if "NCAA Tournament" in item["title"]]
-        if big12 and ncaa:
-            self.assertLess(big12[0], ncaa[0],
-                "Higher volume Big 12 should rank above lower volume NCAA")
+        ncaa_win = [i for i, item in enumerate(items) if item["title"] == "Will Arizona win the NCAA Tournament?"]
+        if big12 and ncaa_win:
+            self.assertLess(big12[0], ncaa_win[0],
+                "Higher volume Big 12 Championship should rank above lower volume NCAA Tournament win")
 
     def test_result_cap_applied(self):
         """Parse should respect the _cap from search response."""
@@ -557,6 +631,29 @@ class TestQualityRanking(unittest.TestCase):
         items = polymarket.parse_polymarket_response(self.sample, topic="Arizona Basketball")
         relevances = [item["relevance"] for item in items]
         self.assertEqual(relevances, sorted(relevances, reverse=True))
+
+    def test_ncaa_seed_found_via_outcome_matching(self):
+        """NCAA seed market should be found when Arizona is an outcome but not in title."""
+        items = polymarket.parse_polymarket_response(self.sample, topic="Arizona Basketball")
+        titles = [item["title"] for item in items]
+        self.assertIn("Who will be the #1 overall seed in the 2026 NCAA Tournament?", titles)
+
+    def test_ncaa_seed_ranks_above_tangential(self):
+        """NCAA seed market (outcome match) should rank above AI regulation (no match)."""
+        items = polymarket.parse_polymarket_response(self.sample, topic="Arizona Basketball")
+        titles = [item["title"] for item in items]
+        seed_idx = titles.index("Who will be the #1 overall seed in the 2026 NCAA Tournament?")
+        tangential = [i for i, t in enumerate(titles) if "AI regulation" in t]
+        if tangential:
+            self.assertLess(seed_idx, tangential[0],
+                f"NCAA seed should rank above tangential. Order: {titles}")
+
+    def test_outcome_reordering_surfaces_topic(self):
+        """Arizona should be surfaced to front of outcome_prices when topic matches."""
+        items = polymarket.parse_polymarket_response(self.sample, topic="Arizona Basketball")
+        seed_market = [i for i in items if "seed" in i["title"].lower()][0]
+        # Arizona should be first in outcome_prices (reordered from position 2)
+        self.assertEqual(seed_market["outcome_prices"][0][0], "Arizona")
 
 
 class TestNormalizePolymarketVolume1mo(unittest.TestCase):

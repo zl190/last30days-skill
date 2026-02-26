@@ -207,6 +207,28 @@ The Judge Agent must:
 
 7. **Cross-platform signals are the strongest evidence.** When items have `[also on: Reddit, HN]` or similar tags, it means the same story appears across multiple platforms. Lead with these cross-platform findings - they're the most important signals in the research.
 
+### Prediction Markets (Polymarket)
+
+**CRITICAL: When Polymarket returns relevant markets, prediction market odds are among the highest-signal data points in your research.** Real money on outcomes cuts through opinion. Treat them as strong evidence, not an afterthought.
+
+**How to interpret and synthesize Polymarket data:**
+
+1. **Prefer structural/long-term markets over near-term deadlines.** Championship odds > regular season title. Regime change > near-term strike deadline. IPO/major milestone > incremental update. Presidency > individual state primary. When multiple markets exist, the bigger question is more interesting to the user.
+
+2. **When the topic is an outcome in a multi-outcome market, call out that specific outcome's odds and movement.** Don't just say "Polymarket has a #1 seed market" - say "Arizona has a 28% chance of being the #1 overall seed, up 10% this month." The user cares about THEIR topic's position in the market.
+
+3. **Weave odds into the narrative as supporting evidence.** Don't isolate Polymarket data in its own paragraph. Instead: "Final Four buzz is building - Polymarket gives Arizona a 12% chance to win the championship (up 3% this week), and 28% to earn a #1 seed."
+
+4. **Citation format:** Always include specific odds AND movement. "Polymarket has Arizona at 28% for a #1 seed (up 10% this month)" - not just "per Polymarket."
+
+5. **When multiple relevant markets exist, highlight 3-5 of the most interesting ones** in your synthesis, ordered by importance (structural > near-term). Don't just pick the highest-volume one.
+
+**Domain examples of market importance ranking:**
+- **Sports:** Championship/tournament odds > conference title > regular season > weekly matchup
+- **Geopolitics:** Regime change/structural outcomes > near-term strike deadlines > sanctions
+- **Tech/Business:** IPO, major product launch, company milestones > incremental updates
+- **Elections:** Presidency > primary > individual state
+
 **Do NOT display stats here - they come at the end, right before the invitation.**
 
 ---
@@ -288,7 +310,8 @@ CITATION PRIORITY (most to least preferred):
 2. r/subreddits from Reddit — "per r/subreddit"
 3. YouTube channels — "per [channel name] on YouTube" (transcript-backed insights)
 4. HN discussions — "per HN" or "per hn/username" (developer community signal)
-5. Web sources — ONLY when Reddit/X/YouTube/HN don't cover that specific fact
+5. Polymarket — "Polymarket has X at Y% (up/down Z%)" with specific odds and movement
+6. Web sources — ONLY when Reddit/X/YouTube/HN/Polymarket don't cover that specific fact
 
 The tool's value is surfacing what PEOPLE are saying, not what journalists wrote.
 When both a web article and an X post cover the same fact, cite the X post.
@@ -339,7 +362,7 @@ KEY PATTERNS from the research:
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
 ├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
-├─ 📊 Polymarket: {N} markets ({short summary of top 2-3 market odds, e.g. "Big 12: 64% Yes, NCAA: 12% Yes"})
+├─ 📊 Polymarket: {N} markets │ {short summary of up to 5 most relevant market odds, e.g. "Championship: 12%, #1 Seed: 28%, Big 12: 64%, vs Kansas: 71%"}
 ├─ 🌐 Web: {N} pages (supplementary)
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
 ---
