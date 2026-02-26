@@ -1,13 +1,13 @@
-# /last30days v3
+# /last30days v2.5
 
 **The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, Hacker News, and the web from the last 30 days, finds what the community is actually upvoting, sharing, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
 
-**New in V3 - four headline features:**
+**New in V2.5 - four headline features:**
 
 1. **Hacker News as a 5th source.** HN stories, Show HN posts, and comment threads are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web. The technical community's signal, captured automatically.
 2. **X handle resolution.** Search "Dor Brothers" and the skill automatically resolves their X handle (@thedorbrothers), then searches their posts directly - finding viral content they posted that keyword search completely misses. Works for people, brands, products, and tools. The skill even verifies handles aren't parody accounts.
 3. **Cross-source linking.** When a Seedance tutorial trends on YouTube (44K views) AND gets discussed on Reddit AND appears on HN, the skill flags it: `[also on: Reddit, HN]`. That cross-platform convergence is the strongest signal something actually matters.
-4. **YouTube relevance scoring.** Synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), channel authority weighting, and smarter title/transcript matching. A blinded evaluation scored v3 at 4.38/5.0 vs 3.73/5.0 for v1.
+4. **YouTube relevance scoring.** Synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), channel authority weighting, and smarter title/transcript matching. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1.
 
 **New in V2.1:** Open-class skill with watchlists, YouTube transcripts as a source, works in OpenAI Codex CLI. [Full changelog below.](#whats-new-in-v21)
 
@@ -890,7 +890,7 @@ If your OpenAI org doesn't have access to a model (e.g., unverified for gpt-4.1)
 
 ---
 
-## What's New in V3
+## What's New in V2.5
 
 ### Hacker News as a 5th source
 
@@ -940,7 +940,7 @@ Ran a 15-way blinded comparison across 5 topics (Claude Code, Seedance, MacBook 
 
 | Version | Score |
 |---------|-------|
-| v3 (cross-source + handle resolution) | 4.38/5.0 |
+| v2.5 (cross-source + handle resolution) | 4.38/5.0 |
 | v2 (with HN) | 4.10/5.0 |
 | v1 (original) | 3.73/5.0 |
 
