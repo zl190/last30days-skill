@@ -1,18 +1,21 @@
-# /last30days v2.1
+# /last30days v3
 
-**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, and the web from the last 30 days, finds what the community is actually upvoting, sharing, and saying on camera, and writes you a prompt that works today, not six months ago. Whether it's Seedance 2.0 access, Suno music prompts, or the latest Nano Banana Pro techniques, you'll prompt like someone who's been paying attention.
+**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, Hacker News, and the web from the last 30 days, finds what the community is actually upvoting, sharing, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
 
-**New in V2.1  - three headline features:**
+**New in V3 - four headline features:**
 
-1. **Open-class skill with watchlists.** Add any topic to a watchlist  - your competitors, specific people, emerging technologies  - and /last30days re-researches it on demand or via cron. Designed for always-on environments like [Open Claw](https://github.com/openclaw/openclaw) where a bot can run research on a schedule and accumulate findings over time.
-2. **YouTube transcripts as a 4th source.** When yt-dlp is installed, /last30days automatically searches YouTube, grabs view counts, and extracts auto-generated transcripts from the top videos. A 20-minute review contains 10x the signal of a single post - now the skill reads it. Inspired by [@steipete](https://x.com/steipete)'s yt-dlp + [summarize](https://github.com/steipete/summarize) toolchain.
-3. **Works in OpenAI Codex CLI.** Same skill, same engine. Install to `~/.agents/skills/last30days` and invoke with `$last30days`. Claude Code and Codex users get the same research.
+1. **Hacker News as a 5th source.** HN stories, Show HN posts, and comment threads are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web. The technical community's signal, captured automatically.
+2. **X handle resolution.** Search "Dor Brothers" and the skill automatically resolves their X handle (@thedorbrothers), then searches their posts directly - finding viral content they posted that keyword search completely misses. Works for people, brands, products, and tools. The skill even verifies handles aren't parody accounts.
+3. **Cross-source linking.** When a Seedance tutorial trends on YouTube (44K views) AND gets discussed on Reddit AND appears on HN, the skill flags it: `[also on: Reddit, HN]`. That cross-platform convergence is the strongest signal something actually matters.
+4. **YouTube relevance scoring.** Synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), channel authority weighting, and smarter title/transcript matching. A blinded evaluation scored v3 at 4.38/5.0 vs 3.73/5.0 for v1.
 
-**New in V2:** Dramatically better search results. Smarter query construction finds posts that V1 missed entirely, and a new two-phase search automatically discovers key @handles and subreddits from initial results, then drills deeper. Free X search (no xAI key needed), `--days=N` for flexible lookback, and automatic model fallback. [Full changelog below.](#whats-new-in-v2)
+**New in V2.1:** Open-class skill with watchlists, YouTube transcripts as a source, works in OpenAI Codex CLI. [Full changelog below.](#whats-new-in-v21)
 
-**The tradeoff:** V2 finds way more content but takes longer - typically 2-8 minutes depending on how niche your topic is. The old V1 was faster but regularly missed results (like returning 0 X posts on trending topics). We think the depth is worth the wait, but if you'd use a faster "quick mode" that trades some depth for speed, let us know: [@mvanhorn](https://x.com/mvanhorn) / [@slashlast30days](https://x.com/slashlast30days).
+**New in V2:** Smarter query construction, two-phase supplemental search, free X search via bundled Bird client, `--days=N` flag, automatic model fallback. [Full changelog below.](#whats-new-in-v2)
 
-**Best for prompt research**: discover what prompting techniques actually work for any tool (ChatGPT, Midjourney, Claude, Figma AI, etc.) by learning from real community discussions and best practices.
+**The tradeoff:** /last30days finds a lot of content but takes 2-8 minutes depending on how niche your topic is. Five sources searched in parallel, results scored, deduplicated, and synthesized. We think the depth is worth the wait, but `--quick` mode is there if you need speed over thoroughness.
+
+**Best for prompt research**: discover what prompting techniques actually work for any tool (ChatGPT, Midjourney, Claude, Paper, etc.) by learning from real community discussions and best practices.
 
 **But also great for anything trending**: music, culture, news, product recommendations, viral trends, or any question where "what are people saying right now?" matters.
 
@@ -887,17 +890,65 @@ If your OpenAI org doesn't have access to a model (e.g., unverified for gpt-4.1)
 
 ---
 
-## What's New in V2
+## What's New in V3
 
-### Way better X and Reddit results
+### Hacker News as a 5th source
 
-V2 finds significantly more content than V1. Two major improvements:
+**The technical community's signal, captured automatically.** HN stories, Show HN posts, and Ask HN threads are searched, scored by points + comments, and synthesized alongside Reddit, X, YouTube, and the web. Comment insights are extracted from top threads to surface the technical community's actual take - not just headlines.
 
-**Smarter query construction** - V1 sent overly specific queries to X search (literal keyword AND matching), causing 0 results on topics that were actively trending. V2 aggressively strips research/meta words ("best", "prompt", "techniques", "tips") and question prefixes ("what are people saying about") to extract just the core topic. Example: `"vibe motion best prompt techniques"` now searches for `"vibe motion"` instead of `"vibe motion prompt techniques"`  - going from 0 posts to 12+. Automatically retries with fewer keywords if the first attempt returns nothing.
+HN items go through the same scoring pipeline as every other source and participate in cross-source linking. When the same topic appears on HN AND Reddit AND YouTube, that convergence gets flagged.
 
-**Smart supplemental search (Phase 2)** - After the initial broad search, extracts key @handles and subreddits from the results, then runs targeted follow-up searches to find content that keyword search alone misses. Example: researching "Open Claw" automatically discovers @openclaw, @steipete and drills into their posts. For Reddit, it hits the free `.json` search endpoint scoped to discovered subreddits  - no extra API keys needed.
+### X handle resolution
 
-**Reddit JSON enrichment** - Fetches real upvote and comment counts from Reddit's free API for every thread, giving you actual engagement signals instead of estimates.
+**Search "Dor Brothers" and the skill finds their viral tweet with 5,600+ likes. Without handle resolution, keyword search misses it entirely.**
+
+The problem: when you search "Dor Brothers" on X, you find 30 posts *about* them. But the Dor Brothers' own viral tweet - "We made a $300M movie starring @LoganPaul with AI in less than 7 days" - never says "Dor Brothers" in the text. Keyword search can't find it.
+
+The solution: before running the search, the skill does one WebSearch to resolve the topic's X handle. It finds @thedorbrothers, then searches their posts directly with no topic filter. Result: 40 X posts (6,900+ likes) instead of 30 (161 likes).
+
+Works for people, brands, products, and tools - anything that might have an X account. The skill verifies handles aren't parody or fan accounts before using them. If no official account exists (like Seedance, which doesn't have one), it skips gracefully.
+
+**How it works:**
+
+```
+1. Agent WebSearches "{topic} X twitter handle site:x.com"
+2. Extracts and verifies the handle from results
+3. Passes --x-handle={handle} to the search engine
+4. Engine searches from:{handle} with no topic keywords (unfiltered)
+5. Results merged with keyword search, deduplicated, scored
+```
+
+No extra API keys needed - uses the agent's built-in WebSearch (available to 100% of users).
+
+### Cross-source linking
+
+**When the same story appears on multiple platforms, the skill flags it.** Items that match across sources get tagged with `[also on: Reddit, HN]` or `[also on: X, YouTube]`. These cross-platform signals are the strongest evidence that something actually matters - not just engagement on one platform, but convergence across all of them.
+
+Cross-source linking uses hybrid similarity (character trigram Jaccard + token Jaccard) to detect matches even when titles differ across platforms. The synthesis instructions weight these cross-platform findings highest.
+
+### YouTube relevance scoring
+
+**YouTube results are now scored with real intelligence, not just keyword matching.**
+
+- **Synonym expansion**: "hip hop" matches "rap", "MacBook" matches "Mac", "AI video" matches "text to video". A rap music mix titled "Lit Hip Hop Mix 2026" went from relevance 0.33 (almost filtered) to 0.71.
+- **Channel authority**: channels with more subscribers get a relevance boost, because a 1M-subscriber channel covering your topic is a stronger signal than a 50-subscriber one.
+- **Title + transcript matching**: relevance is computed from both the video title and transcript content, catching videos that discuss your topic without mentioning it in the title.
+
+### Blinded quality comparison
+
+Ran a 15-way blinded comparison across 5 topics (Claude Code, Seedance, MacBook Pro, rap songs, React vs Svelte). Three versions, labels stripped, randomized as A/B/C:
+
+| Version | Score |
+|---------|-------|
+| v3 (cross-source + handle resolution) | 4.38/5.0 |
+| v2 (with HN) | 4.10/5.0 |
+| v1 (original) | 3.73/5.0 |
+
+Scored on groundedness (30%), specificity (25%), coverage (20%), actionability (15%), format (10%). The relative ranking is meaningful; absolute numbers are LLM-grading-LLM and shouldn't be taken as objective quality scores.
+
+---
+
+## What's New in V2.1
 
 ### Open-class skill with watchlists (v2.1)
 
@@ -921,7 +972,7 @@ Inspired by [Peter Steinberger](https://x.com/steipete)'s yt-dlp + [summarize](h
 
 **X search is fully self-contained** - No external `bird` CLI or xAI API key needed. /last30days bundles a vendored subset of Bird's Twitter GraphQL client (MIT licensed, by Peter Steinberger). Just be logged into x.com in your browser and it auto-detects your session. Falls back to xAI API if bundled search can't authenticate.
 
-### Everything else
+### Everything else (v2.1)
 
 **`--days=N` flag** - Configurable lookback window. `/last30days topic --days=7` for a weekly roundup, `--days=14` for two weeks.
 
@@ -932,6 +983,20 @@ Inspired by [Peter Steinberger](https://x.com/steipete)'s yt-dlp + [summarize](h
 **Citation priority** - Cites @handles from X and r/subreddits over web sources, because the skill's value is surfacing what *people* are saying, not what journalists wrote.
 
 **Marketplace plugin support** - Ships with `.claude-plugin/plugin.json` for Claude Code marketplace compatibility. (Inspired by [@galligan](https://github.com/galligan)'s PR)
+
+---
+
+## What's New in V2
+
+### Way better X and Reddit results
+
+V2 finds significantly more content than V1. Two major improvements:
+
+**Smarter query construction** - V1 sent overly specific queries to X search (literal keyword AND matching), causing 0 results on topics that were actively trending. V2 aggressively strips research/meta words ("best", "prompt", "techniques", "tips") and question prefixes ("what are people saying about") to extract just the core topic. Example: `"vibe motion best prompt techniques"` now searches for `"vibe motion"` instead of `"vibe motion prompt techniques"` - going from 0 posts to 12+. Automatically retries with fewer keywords if the first attempt returns nothing.
+
+**Smart supplemental search (Phase 2)** - After the initial broad search, extracts key @handles and subreddits from the results, then runs targeted follow-up searches to find content that keyword search alone misses. Example: researching "Open Claw" automatically discovers @openclaw, @steipete and drills into their posts. For Reddit, it hits the free `.json` search endpoint scoped to discovered subreddits - no extra API keys needed.
+
+**Reddit JSON enrichment** - Fetches real upvote and comment counts from Reddit's free API for every thread, giving you actual engagement signals instead of estimates.
 
 ### Community contributions
 
@@ -953,6 +1018,7 @@ Thanks to the contributors who helped shape V2:
 | `reddit.com` | Thread URLs for enrichment | None (public JSON) |
 | Twitter GraphQL / `api.x.ai` | Search query | Browser cookies or XAI_API_KEY |
 | `youtube.com` (via yt-dlp) | Search query | None (public search) |
+| `hn.algolia.com` | Search query | None (public API) |
 | `api.search.brave.com` | Search query (optional) | BRAVE_API_KEY |
 | `api.parallel.ai` | Search query (optional) | PARALLEL_API_KEY |
 | `openrouter.ai` | Search query (optional) | OPENROUTER_API_KEY |
