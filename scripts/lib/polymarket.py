@@ -19,15 +19,15 @@ GAMMA_SEARCH_URL = "https://gamma-api.polymarket.com/public-search"
 # Pages to fetch per query (API returns 5 events per page, limit param is a no-op)
 DEPTH_CONFIG = {
     "quick": 1,
-    "default": 2,
-    "deep": 3,
+    "default": 3,
+    "deep": 4,
 }
 
 # Max events to return after merge + dedup + re-ranking
 RESULT_CAP = {
     "quick": 5,
-    "default": 10,
-    "deep": 20,
+    "default": 15,
+    "deep": 25,
 }
 
 
@@ -58,28 +58,29 @@ def _extract_core_subject(topic: str) -> str:
 
 
 def _expand_queries(topic: str) -> List[str]:
-    """Generate 2-4 search queries to cast a wider net.
+    """Generate search queries to cast a wider net.
 
     Strategy:
     - Always include the core subject
-    - Split multi-word topics into component searches
+    - Add ALL individual words as standalone searches (not just first)
     - Include the full topic if different from core
-    - Cap at 4 queries, dedupe
+    - Cap at 6 queries, dedupe
     """
     core = _extract_core_subject(topic)
     queries = [core]
 
-    # Split multi-word topics into component searches
+    # Add ALL individual words as separate queries
     words = core.split()
     if len(words) >= 2:
-        # Try the first significant word alone (e.g., "Arizona" from "Arizona Basketball")
-        queries.append(words[0])
+        for word in words:
+            if len(word) > 1:  # skip single-char words
+                queries.append(word)
 
     # Add the full topic if different from core
     if topic.lower().strip() != core.lower():
         queries.append(topic.strip())
 
-    # Dedupe while preserving order, cap at 4
+    # Dedupe while preserving order, cap at 6
     seen = set()
     unique = []
     for q in queries:
@@ -87,7 +88,44 @@ def _expand_queries(topic: str) -> List[str]:
         if q_lower and q_lower not in seen:
             seen.add(q_lower)
             unique.append(q.strip())
-    return unique[:4]
+    return unique[:6]
+
+
+_GENERIC_TAGS = frozenset({"sports", "politics", "crypto", "science", "culture", "pop culture"})
+
+
+def _extract_domain_queries(topic: str, events: List[Dict]) -> List[str]:
+    """Extract domain-indicator search terms from first-pass event tags.
+
+    Uses structured tag metadata from Gamma API events to discover broader
+    domain categories (e.g., 'NCAA CBB' from a Big 12 basketball event).
+    Falls back to frequent title bigrams if no useful tags exist.
+    """
+    query_words = set(_extract_core_subject(topic).lower().split())
+
+    # Collect tag labels from all first-pass events, count occurrences
+    tag_counts: Dict[str, int] = {}
+    for event in events:
+        tags = event.get("tags") or []
+        for tag in tags:
+            label = tag.get("label", "") if isinstance(tag, dict) else str(tag)
+            if not label:
+                continue
+            label_lower = label.lower()
+            # Skip generic category tags and tags matching existing queries
+            if label_lower in _GENERIC_TAGS:
+                continue
+            if label_lower in query_words:
+                continue
+            tag_counts[label] = tag_counts.get(label, 0) + 1
+
+    # Sort by frequency, take top 2 that appear in 2+ events
+    domain_queries = [
+        label for label, count in sorted(tag_counts.items(), key=lambda x: -x[1])
+        if count >= 2
+    ][:2]
+
+    return domain_queries
 
 
 def _search_single_query(query: str, page: int = 1) -> Dict[str, Any]:
@@ -106,38 +144,13 @@ def _search_single_query(query: str, page: int = 1) -> Dict[str, Any]:
         return {"events": [], "error": str(e)}
 
 
-def search_polymarket(
-    topic: str,
-    from_date: str,
-    to_date: str,
-    depth: str = "default",
-) -> Dict[str, Any]:
-    """Search Polymarket via Gamma API with smart query expansion.
-
-    Runs 2-4 expanded queries in parallel, merges and dedupes by event ID.
-
-    Args:
-        topic: Search topic
-        from_date: Start date (YYYY-MM-DD) - used for activity filtering
-        to_date: End date (YYYY-MM-DD)
-        depth: 'quick', 'default', or 'deep'
-
-    Returns:
-        Dict with 'events' list and optional 'error'.
-    """
-    pages = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
-    cap = RESULT_CAP.get(depth, RESULT_CAP["default"])
-    queries = _expand_queries(topic)
-
-    _log(f"Searching for '{topic}' with queries: {queries} (pages={pages})")
-
-    # Run all (query, page) combinations in parallel
-    all_events = {}  # event_id -> (event_data, query_index)
-    errors = []
-
+def _run_queries_parallel(
+    queries: List[str], pages: int, all_events: Dict, errors: List, start_idx: int = 0,
+) -> None:
+    """Run (query, page) combinations in parallel, merging into all_events."""
     with ThreadPoolExecutor(max_workers=min(8, len(queries) * pages)) as executor:
         futures = {}
-        for i, q in enumerate(queries):
+        for i, q in enumerate(queries, start=start_idx):
             for p in range(1, pages + 1):
                 future = executor.submit(_search_single_query, q, p)
                 futures[future] = i
@@ -154,17 +167,59 @@ def search_polymarket(
                     event_id = event.get("id", "")
                     if not event_id:
                         continue
-                    # Keep the first occurrence (from highest-priority query)
                     if event_id not in all_events:
                         all_events[event_id] = (event, query_idx)
                     elif query_idx < all_events[event_id][1]:
-                        # Replace with higher-priority query result
                         all_events[event_id] = (event, query_idx)
             except Exception as e:
                 errors.append(str(e))
 
+
+def search_polymarket(
+    topic: str,
+    from_date: str,
+    to_date: str,
+    depth: str = "default",
+) -> Dict[str, Any]:
+    """Search Polymarket via Gamma API with two-pass query expansion.
+
+    Pass 1: Run expanded queries in parallel, merge and dedupe by event ID.
+    Pass 2: Extract domain-indicator terms from first-pass titles, search those.
+
+    Args:
+        topic: Search topic
+        from_date: Start date (YYYY-MM-DD) - used for activity filtering
+        to_date: End date (YYYY-MM-DD)
+        depth: 'quick', 'default', or 'deep'
+
+    Returns:
+        Dict with 'events' list and optional 'error'.
+    """
+    pages = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
+    cap = RESULT_CAP.get(depth, RESULT_CAP["default"])
+    queries = _expand_queries(topic)
+
+    _log(f"Searching for '{topic}' with queries: {queries} (pages={pages})")
+
+    # Pass 1: run expanded queries in parallel
+    all_events: Dict[str, tuple] = {}
+    errors: List[str] = []
+    _run_queries_parallel(queries, pages, all_events, errors)
+
+    # Pass 2: extract domain-indicator terms from first-pass titles and search
+    first_pass_events = [ev for ev, _ in all_events.values()]
+    domain_queries = _extract_domain_queries(topic, first_pass_events)
+    # Filter out queries we already ran
+    seen_queries = {q.lower() for q in queries}
+    domain_queries = [dq for dq in domain_queries if dq.lower() not in seen_queries]
+
+    if domain_queries:
+        _log(f"Domain expansion queries: {domain_queries}")
+        _run_queries_parallel(domain_queries, 1, all_events, errors, start_idx=len(queries))
+
     merged_events = [ev for ev, _ in sorted(all_events.values(), key=lambda x: x[1])]
-    _log(f"Found {len(merged_events)} unique events across {len(queries)} queries x {pages} pages")
+    total_queries = len(queries) + len(domain_queries)
+    _log(f"Found {len(merged_events)} unique events across {total_queries} queries")
 
     result = {"events": merged_events, "_cap": cap}
     if errors and not merged_events:
@@ -231,6 +286,24 @@ def _parse_outcome_prices(market: Dict[str, Any]) -> List[tuple]:
         result.append((name, p))
 
     return result
+
+
+def _shorten_question(question: str) -> str:
+    """Extract a short display name from a market question.
+
+    'Will Arizona win the 2026 NCAA Tournament?' -> 'Arizona'
+    'Will Duke be a number 1 seed in the 2026 NCAA...' -> 'Duke'
+    """
+    q = question.strip().rstrip("?")
+    # Common patterns: "Will X win/be/...", "X wins/loses..."
+    m = re.match(r"^Will\s+(.+?)\s+(?:win|be|make|reach|have|lose|qualify|advance|strike|agree|pass|sign|get|become|remain|stay|leave|survive|next)\b", q, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    m = re.match(r"^Will\s+(.+?)\s+", q, re.IGNORECASE)
+    if m and len(m.group(1).split()) <= 4:
+        return m.group(1).strip()
+    # Fallback: truncate
+    return question[:40] if len(question) > 40 else question
 
 
 def _compute_text_similarity(topic: str, title: str, outcomes: List[str] = None) -> float:
@@ -341,14 +414,39 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
 
         # Collect outcome names from ALL active markets (not just top) for similarity scoring
         # Filter to outcomes with price > 1% to avoid noise
+        # Also extract subjects from market questions for neg-risk events (outcomes are Yes/No)
         all_outcome_names = []
         for m in active_markets:
             for name, price in _parse_outcome_prices(m):
                 if price > 0.01 and name not in all_outcome_names:
                     all_outcome_names.append(name)
+            # For neg-risk binary markets (Yes/No outcomes), the team/entity name
+            # lives in the question, e.g., "Will Arizona win the NCAA Tournament?"
+            question = m.get("question", "")
+            if question and question != title:
+                all_outcome_names.append(question)
 
-        # Parse outcome prices from top market
+        # Parse outcome prices - for multi-market events with Yes/No binary
+        # sub-markets, synthesize from market questions to show actual
+        # team/entity probabilities instead of a single market's Yes/No
         outcome_prices = _parse_outcome_prices(top_market)
+        top_outcomes_are_binary = (
+            len(outcome_prices) == 2
+            and {n.lower() for n, _ in outcome_prices} == {"yes", "no"}
+        )
+        if top_outcomes_are_binary and len(active_markets) > 1:
+            synth_outcomes = []
+            for m in active_markets:
+                q = m.get("question", "")
+                if not q:
+                    continue
+                pairs = _parse_outcome_prices(m)
+                yes_price = next((p for name, p in pairs if name.lower() == "yes"), None)
+                if yes_price is not None and yes_price > 0.005:
+                    synth_outcomes.append((q, yes_price))
+            if synth_outcomes:
+                synth_outcomes.sort(key=lambda x: x[1], reverse=True)
+                outcome_prices = [(_shorten_question(q), p) for q, p in synth_outcomes]
 
         # Format price movement
         price_movement = _format_price_movement(top_market)
@@ -412,11 +510,15 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
         # Surface the topic-matching outcome to the front before truncating
         if topic and outcome_prices:
             core = _extract_core_subject(topic).lower()
+            core_tokens = set(core.split())
             reordered = []
             rest = []
             for pair in outcome_prices:
                 name_lower = pair[0].lower()
-                if core in name_lower or name_lower in core:
+                # Match if full core is substring, or name is substring of core,
+                # or any core token appears in the name (handles long question strings)
+                if (core in name_lower or name_lower in core
+                        or any(tok in name_lower for tok in core_tokens if len(tok) > 2)):
                     reordered.append(pair)
                 else:
                     rest.append(pair)

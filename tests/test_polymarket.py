@@ -45,7 +45,8 @@ class TestExpandQueries(unittest.TestCase):
         queries = polymarket._expand_queries("Arizona Basketball")
         self.assertIn("Arizona Basketball", queries)
         self.assertIn("Arizona", queries)
-        self.assertEqual(len(queries), 2)
+        self.assertIn("Basketball", queries)
+        self.assertEqual(len(queries), 3)
 
     def test_with_prefix_stripped(self):
         queries = polymarket._expand_queries("last 7 days Iran")
@@ -58,9 +59,89 @@ class TestExpandQueries(unittest.TestCase):
         # Should not have duplicates
         self.assertEqual(len(queries), len(set(q.lower() for q in queries)))
 
-    def test_max_4_queries(self):
+    def test_max_6_queries(self):
         queries = polymarket._expand_queries("some really long topic with many words")
-        self.assertLessEqual(len(queries), 4)
+        self.assertLessEqual(len(queries), 6)
+
+    def test_all_words_included(self):
+        queries = polymarket._expand_queries("Iran War")
+        self.assertIn("Iran War", queries)
+        self.assertIn("Iran", queries)
+        self.assertIn("War", queries)
+        self.assertEqual(len(queries), 3)
+
+    def test_short_words_excluded(self):
+        """Single-char words should not become standalone queries."""
+        queries = polymarket._expand_queries("A new idea")
+        # "A" is single char, should be excluded
+        self.assertNotIn("A", queries)
+        self.assertIn("new", queries)
+        self.assertIn("idea", queries)
+
+
+class TestExtractDomainQueries(unittest.TestCase):
+    def _make_tag(self, label):
+        return {"id": "1", "label": label, "slug": label.lower().replace(" ", "-")}
+
+    def test_finds_frequent_tags(self):
+        tag_ncaa = self._make_tag("NCAA CBB")
+        tag_sport = self._make_tag("Sports")
+        tag_bball = self._make_tag("Basketball")
+        events = [
+            {"title": "SEC Champion", "tags": [tag_ncaa, tag_sport, tag_bball]},
+            {"title": "ACC Champion", "tags": [tag_ncaa, tag_sport, tag_bball]},
+            {"title": "Big 12 Champion", "tags": [tag_ncaa, tag_sport, tag_bball]},
+        ]
+        result = polymarket._extract_domain_queries("Arizona Basketball", events)
+        self.assertIn("NCAA CBB", result)
+
+    def test_skips_generic_tags(self):
+        tag_sport = self._make_tag("Sports")
+        events = [
+            {"title": "Event 1", "tags": [tag_sport]},
+            {"title": "Event 2", "tags": [tag_sport]},
+            {"title": "Event 3", "tags": [tag_sport]},
+        ]
+        result = polymarket._extract_domain_queries("test topic", events)
+        self.assertNotIn("Sports", result)
+
+    def test_skips_topic_word_tags(self):
+        tag_bball = self._make_tag("Basketball")
+        events = [
+            {"title": "Event 1", "tags": [tag_bball]},
+            {"title": "Event 2", "tags": [tag_bball]},
+        ]
+        result = polymarket._extract_domain_queries("Arizona Basketball", events)
+        self.assertNotIn("Basketball", result)
+
+    def test_requires_minimum_frequency(self):
+        tag_a = self._make_tag("Unique Tag A")
+        tag_b = self._make_tag("Unique Tag B")
+        events = [
+            {"title": "Event 1", "tags": [tag_a]},
+            {"title": "Event 2", "tags": [tag_b]},
+        ]
+        result = polymarket._extract_domain_queries("test topic", events)
+        self.assertEqual(result, [])
+
+    def test_caps_at_two(self):
+        tags = [self._make_tag(f"Tag {i}") for i in range(5)]
+        events = [{"title": f"Event {i}", "tags": tags} for i in range(3)]
+        result = polymarket._extract_domain_queries("test topic", events)
+        self.assertLessEqual(len(result), 2)
+
+    def test_empty_events(self):
+        result = polymarket._extract_domain_queries("Arizona Basketball", [])
+        self.assertEqual(result, [])
+
+    def test_events_without_tags(self):
+        events = [
+            {"title": "Event 1"},
+            {"title": "Event 2", "tags": None},
+            {"title": "Event 3", "tags": []},
+        ]
+        result = polymarket._extract_domain_queries("test topic", events)
+        self.assertEqual(result, [])
 
 
 class TestFormatPriceMovement(unittest.TestCase):
@@ -462,19 +543,19 @@ class TestDepthConfig(unittest.TestCase):
         self.assertEqual(polymarket.DEPTH_CONFIG["quick"], 1)
 
     def test_default_pages(self):
-        self.assertEqual(polymarket.DEPTH_CONFIG["default"], 2)
+        self.assertEqual(polymarket.DEPTH_CONFIG["default"], 3)
 
     def test_deep_pages(self):
-        self.assertEqual(polymarket.DEPTH_CONFIG["deep"], 3)
+        self.assertEqual(polymarket.DEPTH_CONFIG["deep"], 4)
 
     def test_result_cap_quick(self):
         self.assertEqual(polymarket.RESULT_CAP["quick"], 5)
 
     def test_result_cap_default(self):
-        self.assertEqual(polymarket.RESULT_CAP["default"], 10)
+        self.assertEqual(polymarket.RESULT_CAP["default"], 15)
 
     def test_result_cap_deep(self):
-        self.assertEqual(polymarket.RESULT_CAP["deep"], 20)
+        self.assertEqual(polymarket.RESULT_CAP["deep"], 25)
 
 
 class TestTextSimilarity(unittest.TestCase):
