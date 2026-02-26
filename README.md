@@ -2,12 +2,11 @@
 
 **The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, Hacker News, and the web from the last 30 days, finds what the community is actually upvoting, sharing, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
 
-**New in V2.5 - four headline features:**
+**New in V2.5 - dramatically better results:**
 
-1. **Hacker News as a 5th source.** HN stories, Show HN posts, and comment threads are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web. The technical community's signal, captured automatically.
-2. **X handle resolution.** Search "Dor Brothers" and the skill automatically resolves their X handle (@thedorbrothers), then searches their posts directly - finding viral content they posted that keyword search completely misses. Works for people, brands, products, and tools. The skill even verifies handles aren't parody accounts.
-3. **Cross-source linking.** When a Seedance tutorial trends on YouTube (44K views) AND gets discussed on Reddit AND appears on HN, the skill flags it: `[also on: Reddit, HN]`. That cross-platform convergence is the strongest signal something actually matters.
-4. **YouTube relevance scoring.** Synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), channel authority weighting, and smarter title/transcript matching. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1.
+1. **Smarter scoring across the board.** New relevance scoring with synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), cross-source linking that flags when the same story trends on multiple platforms simultaneously, and X handle resolution that finds viral posts keyword search completely misses. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1 across 5 test topics.
+2. **Hacker News as a 5th source.** HN stories, Show HN posts, and comment threads are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web.
+3. **X handle resolution.** Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly - finding their 5,600-like viral tweet that keyword search missed entirely. Works for people, brands, products, and tools.
 
 **New in V2.1:** Open-class skill with watchlists, YouTube transcripts as a source, works in OpenAI Codex CLI. [Full changelog below.](#whats-new-in-v21)
 
@@ -892,19 +891,39 @@ If your OpenAI org doesn't have access to a model (e.g., unverified for gpt-4.1)
 
 ## What's New in V2.5
 
+### Dramatically better results
+
+**The biggest upgrade is result quality.** V2.5 finds more relevant content, surfaces stronger signals, and catches things keyword search completely misses. Three improvements work together:
+
+**Smarter scoring** - New relevance scoring with synonym expansion means "hip hop" matches "rap", "MacBook" matches "Mac", "AI video" matches "text to video". A rap music mix titled "Lit Hip Hop Mix 2026" went from relevance 0.33 (almost filtered out) to 0.71. Channel authority weighting boosts results from established creators. Title + transcript matching catches videos that discuss your topic without mentioning it in the title.
+
+**Cross-source linking** - When the same story appears on multiple platforms, the skill flags it with `[also on: Reddit, HN]` or `[also on: X, YouTube]`. These cross-platform signals are the strongest evidence that something actually matters - not just engagement on one platform, but convergence across all of them. Uses hybrid similarity (character trigram Jaccard + token Jaccard) to detect matches even when titles differ across platforms.
+
+**X handle resolution** - Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly with no topic filter. Their viral tweet - "We made a $300M movie starring @LoganPaul with AI in less than 7 days" (5,600+ likes) - never says "Dor Brothers" in the text. Keyword search can't find it. Handle resolution can. Result: 40 X posts (6,900+ likes) instead of 30 (161 likes). Works for people, brands, products, and tools. [Details below.](#x-handle-resolution-details)
+
+### Blinded quality comparison
+
+Ran a 15-way blinded comparison across 5 topics (Claude Code, Seedance, MacBook Pro, rap songs, React vs Svelte). Three versions, labels stripped, randomized as A/B/C:
+
+| Version | Score |
+|---------|-------|
+| v2.5 (cross-source + handle resolution) | 4.38/5.0 |
+| v2 (with HN) | 4.10/5.0 |
+| v1 (original) | 3.73/5.0 |
+
+Scored on groundedness (30%), specificity (25%), coverage (20%), actionability (15%), format (10%). The relative ranking is meaningful; absolute numbers are LLM-grading-LLM and shouldn't be taken as objective quality scores. The biggest gains came from detecting where sources agree - not just finding more sources.
+
 ### Hacker News as a 5th source
 
 **The technical community's signal, captured automatically.** HN stories, Show HN posts, and Ask HN threads are searched, scored by points + comments, and synthesized alongside Reddit, X, YouTube, and the web. Comment insights are extracted from top threads to surface the technical community's actual take - not just headlines.
 
 HN items go through the same scoring pipeline as every other source and participate in cross-source linking. When the same topic appears on HN AND Reddit AND YouTube, that convergence gets flagged.
 
-### X handle resolution
+### X handle resolution details
 
-**Search "Dor Brothers" and the skill finds their viral tweet with 5,600+ likes. Without handle resolution, keyword search misses it entirely.**
+The problem: when you search a topic on X, you find posts *about* it. But the topic's own account often doesn't mention its own name in tweets. Keyword search can't find those posts.
 
-The problem: when you search "Dor Brothers" on X, you find 30 posts *about* them. But the Dor Brothers' own viral tweet - "We made a $300M movie starring @LoganPaul with AI in less than 7 days" - never says "Dor Brothers" in the text. Keyword search can't find it.
-
-The solution: before running the search, the skill does one WebSearch to resolve the topic's X handle. It finds @thedorbrothers, then searches their posts directly with no topic filter. Result: 40 X posts (6,900+ likes) instead of 30 (161 likes).
+The solution: before running the search, the skill does one WebSearch to resolve the topic's X handle. It finds the handle, then searches their posts directly with no topic filter - catching viral posts keyword search misses entirely.
 
 Works for people, brands, products, and tools - anything that might have an X account. The skill verifies handles aren't parody or fan accounts before using them. If no official account exists (like Seedance, which doesn't have one), it skips gracefully.
 
@@ -919,32 +938,6 @@ Works for people, brands, products, and tools - anything that might have an X ac
 ```
 
 No extra API keys needed - uses the agent's built-in WebSearch (available to 100% of users).
-
-### Cross-source linking
-
-**When the same story appears on multiple platforms, the skill flags it.** Items that match across sources get tagged with `[also on: Reddit, HN]` or `[also on: X, YouTube]`. These cross-platform signals are the strongest evidence that something actually matters - not just engagement on one platform, but convergence across all of them.
-
-Cross-source linking uses hybrid similarity (character trigram Jaccard + token Jaccard) to detect matches even when titles differ across platforms. The synthesis instructions weight these cross-platform findings highest.
-
-### YouTube relevance scoring
-
-**YouTube results are now scored with real intelligence, not just keyword matching.**
-
-- **Synonym expansion**: "hip hop" matches "rap", "MacBook" matches "Mac", "AI video" matches "text to video". A rap music mix titled "Lit Hip Hop Mix 2026" went from relevance 0.33 (almost filtered) to 0.71.
-- **Channel authority**: channels with more subscribers get a relevance boost, because a 1M-subscriber channel covering your topic is a stronger signal than a 50-subscriber one.
-- **Title + transcript matching**: relevance is computed from both the video title and transcript content, catching videos that discuss your topic without mentioning it in the title.
-
-### Blinded quality comparison
-
-Ran a 15-way blinded comparison across 5 topics (Claude Code, Seedance, MacBook Pro, rap songs, React vs Svelte). Three versions, labels stripped, randomized as A/B/C:
-
-| Version | Score |
-|---------|-------|
-| v2.5 (cross-source + handle resolution) | 4.38/5.0 |
-| v2 (with HN) | 4.10/5.0 |
-| v1 (original) | 3.73/5.0 |
-
-Scored on groundedness (30%), specificity (25%), coverage (20%), actionability (15%), format (10%). The relative ranking is meaningful; absolute numbers are LLM-grading-LLM and shouldn't be taken as objective quality scores.
 
 ---
 
