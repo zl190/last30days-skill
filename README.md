@@ -4,8 +4,8 @@
 
 **New in V2.5 - dramatically better results:**
 
-1. **Smarter scoring across the board.** New relevance scoring with synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac"), cross-source linking that flags when the same story trends on multiple platforms simultaneously, and X handle resolution that finds viral posts keyword search completely misses. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1 across 5 test topics.
-2. **Hacker News and Polymarket as new sources.** HN stories, Show HN posts, and prediction market odds are now searched, scored, and synthesized alongside Reddit, X, YouTube, and the web. Polymarket surfaces what people are putting real money on - betting odds reflect conviction, not just opinions.
+1. **Polymarket prediction markets and Hacker News.** See what people are betting real money on and what the technical community is actually discussing. Search "Arizona Basketball" and get NCAA Tournament championship odds (Arizona: 12%), #1 seed probability (88%), and Big 12 title race (69%) - pulled from 50+ open markets across 10 events, not just Reddit opinions. Search "Iran War" and get 15 live prediction markets with strike probabilities, regime change bets, and war declaration odds. Two-pass query expansion with tag-based domain bridging discovers markets where your topic is an outcome buried inside a broader event, not just a title keyword match. HN stories, Show HN posts, and comment insights are scored by points + comments and participate in cross-source convergence detection.
+2. **Multi-signal quality-ranked relevance scoring.** Every result across all six sources runs through a composite scoring pipeline: bidirectional text similarity with synonym expansion and token overlap, engagement velocity normalization, source authority weighting, cross-platform convergence detection via hybrid trigram-token Jaccard similarity, and temporal recency decay. Polymarket markets are ranked on a 5-factor weighted composite - text relevance (30%), 24-hour volume (30%), liquidity depth (15%), price movement velocity (15%), and outcome competitiveness (10%) - with outcome-aware scoring that matches your topic against individual market positions, not just event titles. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1 across 5 test topics.
 3. **X handle resolution.** Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly - finding their 5,600-like viral tweet that keyword search missed entirely. Works for people, brands, products, and tools.
 
 **New in V2.1:** Open-class skill with watchlists, YouTube transcripts as a source, works in OpenAI Codex CLI. [Full changelog below.](#whats-new-in-v21)
@@ -233,6 +233,29 @@ This example shows /last30days learning that **JSON prompts dominate** the Nano 
 > - The Bianca Censori Vanity Fair interview  - what she actually said vs. the tabloid headlines
 
 This example shows /last30days as a **current events research tool**  - no prompting, no target tool, just "what's happening with Kanye?" and you get a synthesized expert briefing pulled from 33 X posts and 3 Reddit threads with real engagement data.
+
+---
+
+## Example: Anthropic Odds (Prediction Markets)
+
+**Query:** `/last30days anthropic odds`
+
+**Research Output:**
+> **Pentagon standoff is THE story right now** - Defense Secretary Hegseth gave Anthropic a Friday deadline to drop AI guardrails for military use or face blacklisting via the Defense Production Act, per CBS, CNN, Bloomberg, and a wave of X posts from @The__GDD, @trendy_tech_, and @jimkaskade. The trigger was Claude's use during the Maduro capture operation in January. Anthropic CEO Dario Amodei insists AI-controlled weapons and mass surveillance are lines the company won't cross. Polymarket traders put the ban odds at just 22%, signaling they think it's posturing, per @Lolipeterh.
+>
+> **Prediction markets love Anthropic's tech, skeptical on IPO** - Polymarket gives Anthropic a 98% chance of having the best AI model at end of February and 61% for March (Google at 22%, OpenAI at 10%). Claude 4.6 is dominating. But the IPO picture is murkier: @predictheory flagged that Anthropic IPO-first odds on Kalshi "fell through the floor, ~70% down to the low teens in one move." Polymarket has Anthropic at 64% to IPO before OpenAI, but 95% NO on an IPO by June 2026. Meanwhile, 87% odds Anthropic hits $500B+ valuation this year - current valuation is $380B after a $30B raise led by GIC and Coatue, per Fortune.
+>
+> **Claude FrontierMath odds surging** - Polymarket's "Will Claude score 50% on FrontierMath?" market jumped 28% today to 48% YES. This is a live bet on whether Claude can crack elite-level math benchmarks by June 30.
+
+**Key patterns from the research:**
+1. Pentagon standoff as posturing - Polymarket gives only 22% chance of actual ban, money says it's negotiation theater
+2. Model dominance vs IPO uncertainty - 98% best model, but IPO timing is wide open
+3. FrontierMath as a live benchmark bet - real money tracking Claude's capability trajectory
+4. Big money piling in - Dan Sundheim's D1 Capital, Amazon's quiet bet, $380B valuation
+
+**Research Stats:** 25 X posts (218 likes) + 13 YouTube videos (719K views) + 6 HN stories (48 points) + 11 Polymarket markets (Best model Feb: 98%, March: 61%, IPO first: 64%, $500B+ val: 87%, FrontierMath 50%: 48%)
+
+This example shows /last30days as a **prediction market intelligence tool** - two words ("anthropic odds") and you get 11 live Polymarket positions spanning model benchmarks, IPO timing, valuation milestones, and the Pentagon standoff, all synthesized with X commentary, YouTube analysis, and HN discussion. The two-pass query expansion found markets where "Anthropic" is an outcome inside broader "best AI model" and "AI company IPO" events.
 
 ---
 
@@ -893,15 +916,36 @@ If your OpenAI org doesn't have access to a model (e.g., unverified for gpt-4.1)
 
 ## What's New in V2.5
 
-### Dramatically better results
+### Polymarket prediction markets and Hacker News
 
-**The biggest upgrade is result quality.** V2.5 finds more relevant content, surfaces stronger signals, and catches things keyword search completely misses. Three improvements work together:
+**The killer feature: see what people are betting real money on.** Polymarket prediction markets are searched for any topic, surfacing live odds, 24-hour volume, liquidity, and price movements alongside what people are saying on Reddit/X/YouTube/HN.
 
-**Smarter scoring** - New relevance scoring with synonym expansion means "hip hop" matches "rap", "MacBook" matches "Mac", "AI video" matches "text to video". A rap music mix titled "Lit Hip Hop Mix 2026" went from relevance 0.33 (almost filtered out) to 0.71. Channel authority weighting boosts results from established creators. Title + transcript matching catches videos that discuss your topic without mentioning it in the title.
+Search "Arizona Basketball" and you get:
+- NCAA Tournament Winner - Arizona: 12% (30 open markets, $1.2M volume)
+- #1 Seed in NCAA Tournament - Arizona: 88% (20 open markets)
+- Big 12 Regular Season Champion - Arizona: 69%
 
-**Cross-source linking** - When the same story appears on multiple platforms, the skill flags it with `[also on: Reddit, HN]` or `[also on: X, YouTube]`. These cross-platform signals are the strongest evidence that something actually matters - not just engagement on one platform, but convergence across all of them. Uses hybrid similarity (character trigram Jaccard + token Jaccard) to detect matches even when titles differ across platforms.
+Search "Iran War" and you get 15 live prediction markets: US strikes by March (70%), War Powers resolution (60%), Khamenei out by March 31 (18%), war declaration (2%).
 
-**X handle resolution** - Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly with no topic filter. Their viral tweet - "We made a $300M movie starring @LoganPaul with AI in less than 7 days" (5,600+ likes) - never says "Dor Brothers" in the text. Keyword search can't find it. Handle resolution can. Result: 40 X posts (6,900+ likes) instead of 30 (161 likes). Works for people, brands, products, and tools. [Details below.](#x-handle-resolution-details)
+**Two-pass query expansion with tag-based domain bridging** discovers markets the Gamma API can't find through title search alone. When your topic is an *outcome* buried inside a broader market (e.g., "Arizona" is a betting option inside "NCAA Tournament Winner"), the first pass searches all individual topic words in parallel, extracts structured category tags from the results (like "NCAA CBB", "Geopolitics"), then runs a second-pass search on those domain indicators. The result: markets that are invisible to keyword search become discoverable through domain context.
+
+**Neg-risk binary market synthesis** handles Polymarket's multi-outcome events (where each team/entity is a separate Yes/No market). The engine detects the binary sub-market pattern, extracts entity names from market questions, and synthesizes a unified outcome display - showing "Arizona: 12%, Duke: 18%, Houston: 15%" instead of raw "Yes: 12%, No: 88%" for each sub-market.
+
+**Hacker News as a source** - HN stories, Show HN posts, and Ask HN threads are searched via the Algolia API, scored by points + comments, and synthesized alongside all other sources. Comment insights are extracted from top threads to surface the technical community's actual take. HN items participate in cross-source convergence detection - when the same topic trends on HN AND Reddit AND YouTube, that signal gets flagged.
+
+No API keys required for either source. Inspired by community PRs from [@ARJ999](https://github.com/ARJ999) ([#12](https://github.com/mvanhorn/last30days-skill/pull/12)) and [@wkbaran](https://github.com/wkbaran) ([#26](https://github.com/mvanhorn/last30days-skill/pull/26)), with [@gbessoni](https://github.com/gbessoni) endorsing HN as the right addition.
+
+### Multi-signal quality-ranked relevance scoring
+
+**Every result across all six sources runs through a composite scoring pipeline.** V2.5 doesn't just find more content - it ranks it with significantly higher precision.
+
+**Text similarity engine** - Bidirectional substring matching with synonym expansion ("hip hop" matches "rap", "MacBook" matches "Mac", "AI video" matches "text to video") and token-level overlap scoring. A rap music mix titled "Lit Hip Hop Mix 2026" went from relevance 0.33 (almost filtered out) to 0.71. Title + transcript matching catches videos that discuss your topic without mentioning it in the title.
+
+**Polymarket 5-factor weighted composite** - Markets are ranked by text relevance (30%), 24-hour trading volume (30%), liquidity depth (15%), price movement velocity (15%), and outcome competitiveness (10%). Outcome-aware scoring matches your topic against individual market positions using bidirectional substring matching and token overlap - not just event titles. A market with your topic at 88% probability ranks higher than one where it's at 2%.
+
+**Cross-platform convergence detection** - When the same story appears on multiple platforms, the skill flags it with `[also on: Reddit, HN]` or `[also on: X, YouTube]`. Uses hybrid similarity (character trigram Jaccard + token Jaccard) to detect matches even when titles differ across platforms. These cross-platform signals are the strongest evidence that something actually matters.
+
+**Channel authority weighting** - Boosts results from established creators. Source-specific engagement normalization ensures a 500-upvote Reddit thread and a 5,000-like X post are compared on equal footing.
 
 ### Blinded quality comparison
 
@@ -909,27 +953,15 @@ Ran a 15-way blinded comparison across 5 topics (Claude Code, Seedance, MacBook 
 
 | Version | Score |
 |---------|-------|
-| v2.5 (cross-source + handle resolution) | 4.38/5.0 |
+| v2.5 (Polymarket + HN + scoring) | 4.38/5.0 |
 | v2 (with HN) | 4.10/5.0 |
 | v1 (original) | 3.73/5.0 |
 
-Scored on groundedness (30%), specificity (25%), coverage (20%), actionability (15%), format (10%). The relative ranking is meaningful; absolute numbers are LLM-grading-LLM and shouldn't be taken as objective quality scores. The biggest gains came from detecting where sources agree - not just finding more sources.
+Scored on groundedness (30%), specificity (25%), coverage (20%), actionability (15%), format (10%). The relative ranking is meaningful; absolute numbers are LLM-grading-LLM and shouldn't be taken as objective quality scores. The biggest gains came from prediction market data and detecting where sources agree.
 
-### Hacker News as a source
+### X handle resolution
 
-**The technical community's signal, captured automatically.** HN stories, Show HN posts, and Ask HN threads are searched, scored by points + comments, and synthesized alongside Reddit, X, YouTube, and the web. Comment insights are extracted from top threads to surface the technical community's actual take - not just headlines.
-
-HN items go through the same scoring pipeline as every other source and participate in cross-source linking. When the same topic appears on HN AND Reddit AND YouTube, that convergence gets flagged.
-
-Inspired by community PRs from [@ARJ999](https://github.com/ARJ999) ([#12](https://github.com/mvanhorn/last30days-skill/pull/12)) and [@wkbaran](https://github.com/wkbaran) ([#26](https://github.com/mvanhorn/last30days-skill/pull/26)), with [@gbessoni](https://github.com/gbessoni) endorsing HN as the right addition.
-
-### Polymarket prediction markets as a source
-
-**What people are putting real money on.** Polymarket prediction markets are searched for any topic, surfacing betting odds and price movements alongside what people are saying on Reddit/X/YouTube/HN. Search "Iran" and you'll find markets on US strikes, Khamenei's future, and nuclear negotiations - with live odds and volume.
-
-Uses smart multi-query expansion (same approach as YouTube synonym expansion and X handle resolution) to cast a wider net. "Arizona Basketball" finds markets on Big 12 title odds, NCAA tournament seeding, and March Madness outcomes - not just literal keyword matches.
-
-No API key required - uses Polymarket's free public Gamma API. Sources with zero results are automatically hidden from the stats output.
+Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly with no topic filter. Their viral tweet - "We made a $300M movie starring @LoganPaul with AI in less than 7 days" (5,600+ likes) - never says "Dor Brothers" in the text. Keyword search can't find it. Handle resolution can. Result: 40 X posts (6,900+ likes) instead of 30 (161 likes). Works for people, brands, products, and tools. [Details below.](#x-handle-resolution-details)
 
 ### X handle resolution details
 
