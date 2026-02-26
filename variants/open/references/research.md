@@ -128,13 +128,13 @@ All agents reported back!
 |- Reddit: {N} threads | {N} upvotes | {N} comments
 |- X: {N} posts | {N} likes | {N} reposts
 |- YouTube: {N} videos | {N} views | {N} with transcripts
-|- Polymarket: {N} markets | top odds: {outcome} {pct}%
+|- Polymarket: {N} markets ({short summary of top 2-3 market odds})
 |- Web: {N} pages (supplementary)
 |- Top voices: @{handle1}, @{handle2} | r/{sub1}, r/{sub2}
 ---
 ```
 
-Omit any source line that returned 0 results.
+**CRITICAL: Omit any source line that returned 0 results.** Do NOT show "0 threads", "0 stories", "0 markets", or "(no results this cycle)". If a source found nothing, DELETE that line entirely.
 
 **3. Invitation** with 2-3 specific follow-up suggestions based on research.
 

@@ -339,13 +339,13 @@ KEY PATTERNS from the research:
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
 ├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
-├─ 📈 Polymarket: {N} markets │ ${vol} volume │ top odds: {outcome} {pct}%
+├─ 📊 Polymarket: {N} markets ({short summary of top 2-3 market odds, e.g. "Big 12: 64% Yes, NCAA: 12% Yes"})
 ├─ 🌐 Web: {N} pages (supplementary)
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
 ---
 ```
 
-Omit any source line that returned 0 results. Do NOT show "0 threads" or "0 stories" lines.
+**CRITICAL: Omit any source line that returned 0 results.** Do NOT show "0 threads", "0 stories", "0 markets", or "(no results this cycle)". If a source found nothing, DELETE that line entirely - don't include it at all.
 NEVER use plain text dashes (-) or pipe (|). ALWAYS use ├─ └─ │ and the emoji.
 
 **SELF-CHECK before displaying**: Re-read your "What I learned" section. Does it match what the research ACTUALLY says? If you catch yourself projecting your own knowledge instead of the research, rewrite it.
