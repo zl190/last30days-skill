@@ -31,15 +31,15 @@ Research typically takes 2-8 minutes. Starting now.
 
 ---
 
-## Step 0.5: Resolve X Handle (if topic is a person/brand)
+## Step 0.5: Resolve X Handle (if topic could have an X account)
 
-If TOPIC looks like a **person, creator, brand, or specific account** (1-3 words, proper noun), do ONE quick WebSearch:
+If TOPIC looks like it could have its own X account - **people, creators, brands, products, tools, companies** (e.g., "Dor Brothers", "Nano Banana Pro", "Seedance"), do ONE quick WebSearch:
 
 ```
-WebSearch("{TOPIC} X twitter handle")
+WebSearch("{TOPIC} X twitter handle site:x.com")
 ```
 
-Extract their X handle from results (look for `x.com/{handle}` URLs or "@handle" mentions). If found, pass it to the script as `--x-handle={handle}` (no @). Skip if TOPIC is generic, already has @, or uses `--quick`.
+Extract their X handle from results (look for `x.com/{handle}` URLs or "@handle" mentions). **Verify it's the real account, not a parody/fan page** - check for verified status, official website links, consistent naming. If found, pass as `--x-handle={handle}` (no @). Skip if TOPIC is a generic concept (not an entity), already has @, uses `--quick`, or no official account exists.
 
 ---
 

@@ -81,26 +81,32 @@ This text MUST appear before you call any tools. It confirms to the user that yo
 
 ---
 
-## Step 0.5: Resolve X Handle (if topic is a person/brand)
+## Step 0.5: Resolve X Handle (if topic could have an X account)
 
-If TOPIC looks like a **person, creator, brand, or specific account** (1-3 words, proper noun - e.g., "Dor Brothers", "Jason Calacanis", "Linus Ekenstam"), do ONE quick WebSearch before running the script:
+If TOPIC looks like it could have its own X/Twitter account - **people, creators, brands, products, tools, companies, communities** (e.g., "Dor Brothers", "Jason Calacanis", "Nano Banana Pro", "Seedance", "Midjourney"), do ONE quick WebSearch:
 
 ```
-WebSearch("{TOPIC} X twitter handle")
+WebSearch("{TOPIC} X twitter handle site:x.com")
 ```
 
 From the results, extract their X/Twitter handle. Look for:
-- Profile URLs like `x.com/{handle}` or `twitter.com/{handle}`
+- **Verified profile URLs** like `x.com/{handle}` or `twitter.com/{handle}`
 - Mentions like "@handle" in bios, articles, or social profiles
 - "Follow @handle on X" patterns
 
-If you find a clear, unambiguous handle, you'll pass it to the script as `--x-handle={handle}` (without the @). This lets the script search that account's posts directly - finding content they posted that doesn't mention their own name.
+**Verify the account is real, not a parody/fan account.** Check for:
+- Verified/blue checkmark in the search results
+- Official website linking to the X account
+- Consistent naming (e.g., @thedorbrothers for "The Dor Brothers", not @DorBrosFan)
+- If results only show fan/parody/news accounts (not the entity's own account), skip - the entity may not have an X presence
+
+If you find a clear, verified handle, pass it as `--x-handle={handle}` (without @). This searches that account's posts directly - finding content they posted that doesn't mention their own name.
 
 **Skip this step if:**
-- TOPIC is clearly not an entity (e.g., "best rap songs 2026", "how to use Docker")
+- TOPIC is clearly a generic concept, not an entity (e.g., "best rap songs 2026", "how to use Docker", "AI ethics debate")
 - TOPIC already contains @ (user provided the handle directly)
 - Using `--quick` depth
-- You're unsure - the script works fine without it
+- WebSearch shows no official X account exists for this entity
 
 Store: `RESOLVED_HANDLE = {handle or empty}`
 
