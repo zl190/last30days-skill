@@ -5,6 +5,15 @@ from typing import List, Set, Tuple, Union
 
 from . import schema
 
+# Stopwords for token-based Jaccard (cross-source linking)
+STOPWORDS = frozenset({
+    'the', 'a', 'an', 'to', 'for', 'how', 'is', 'in', 'of', 'on',
+    'and', 'with', 'from', 'by', 'at', 'this', 'that', 'it', 'my',
+    'your', 'i', 'me', 'we', 'you', 'what', 'are', 'do', 'can',
+    'its', 'be', 'or', 'not', 'no', 'so', 'if', 'but', 'about',
+    'all', 'just', 'get', 'has', 'have', 'was', 'will', 'show', 'hn',
+})
+
 
 def normalize_text(text: str) -> str:
     """Normalize text for comparison.
@@ -59,10 +68,42 @@ def _get_cross_source_text(item: AnyItem) -> str:
 
     Same as get_item_text() but truncates X posts to 100 chars
     to level the playing field against short Reddit/HN titles.
+    Strips 'Show HN:' prefix from HN titles for fairer matching.
     """
     if isinstance(item, schema.XItem):
         return item.text[:100]
+    if isinstance(item, schema.HackerNewsItem):
+        title = item.title
+        if title.startswith("Show HN:"):
+            title = title[8:].strip()
+        elif title.startswith("Ask HN:"):
+            title = title[7:].strip()
+        return title
     return get_item_text(item)
+
+
+def _tokenize_for_xref(text: str) -> Set[str]:
+    """Tokenize text for cross-source token Jaccard comparison."""
+    words = re.sub(r'[^\w\s]', ' ', text.lower()).split()
+    return {w for w in words if w not in STOPWORDS and len(w) > 1}
+
+
+def _token_jaccard(text_a: str, text_b: str) -> float:
+    """Token-level Jaccard similarity (word overlap)."""
+    tokens_a = _tokenize_for_xref(text_a)
+    tokens_b = _tokenize_for_xref(text_b)
+    if not tokens_a or not tokens_b:
+        return 0.0
+    intersection = len(tokens_a & tokens_b)
+    union = len(tokens_a | tokens_b)
+    return intersection / union if union else 0.0
+
+
+def _hybrid_similarity(text_a: str, text_b: str) -> float:
+    """Hybrid similarity: max of char-trigram Jaccard and token Jaccard."""
+    trigram_sim = jaccard_similarity(get_ngrams(text_a), get_ngrams(text_b))
+    token_sim = _token_jaccard(text_a, text_b)
+    return max(trigram_sim, token_sim)
 
 
 def find_duplicates(
@@ -159,17 +200,18 @@ def dedupe_hackernews(
 
 def cross_source_link(
     *source_lists: List[AnyItem],
-    threshold: float = 0.5,
+    threshold: float = 0.40,
 ) -> None:
     """Annotate items with cross-source references.
 
-    Compares items across different source types using Jaccard similarity
-    on char trigrams. When similarity exceeds threshold, adds bidirectional
-    cross_refs with the related item's ID. Modifies items in-place.
+    Compares items across different source types using hybrid similarity
+    (max of char-trigram Jaccard and token Jaccard). When similarity exceeds
+    threshold, adds bidirectional cross_refs with the related item's ID.
+    Modifies items in-place.
 
     Args:
         *source_lists: Variable number of per-source item lists
-        threshold: Similarity threshold for cross-linking (default 0.5)
+        threshold: Similarity threshold for cross-linking (default 0.40)
     """
     all_items = []
     for source_list in source_lists:
@@ -178,8 +220,8 @@ def cross_source_link(
     if len(all_items) <= 1:
         return
 
-    # Pre-compute trigrams using cross-source text extraction
-    ngrams = [get_ngrams(_get_cross_source_text(item)) for item in all_items]
+    # Pre-compute cross-source text for each item
+    texts = [_get_cross_source_text(item) for item in all_items]
 
     for i in range(len(all_items)):
         for j in range(i + 1, len(all_items)):
@@ -187,7 +229,7 @@ def cross_source_link(
             if type(all_items[i]) is type(all_items[j]):
                 continue
 
-            similarity = jaccard_similarity(ngrams[i], ngrams[j])
+            similarity = _hybrid_similarity(texts[i], texts[j])
             if similarity >= threshold:
                 # Bidirectional cross-reference
                 if all_items[j].id not in all_items[i].cross_refs:

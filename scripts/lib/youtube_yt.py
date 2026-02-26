@@ -45,10 +45,38 @@ STOPWORDS = frozenset({
 })
 
 
+# Synonym groups for relevance scoring (bidirectional expansion)
+SYNONYMS = {
+    'hip': {'rap', 'hiphop'},
+    'hop': {'rap', 'hiphop'},
+    'rap': {'hip', 'hop', 'hiphop'},
+    'hiphop': {'rap', 'hip', 'hop'},
+    'js': {'javascript'},
+    'javascript': {'js'},
+    'ts': {'typescript'},
+    'typescript': {'ts'},
+    'ai': {'artificial', 'intelligence'},
+    'ml': {'machine', 'learning'},
+    'react': {'reactjs'},
+    'reactjs': {'react'},
+    'svelte': {'sveltejs'},
+    'sveltejs': {'svelte'},
+    'vue': {'vuejs'},
+    'vuejs': {'vue'},
+}
+
+
 def _tokenize(text: str) -> Set[str]:
-    """Lowercase, strip punctuation, remove stopwords, drop single-char tokens."""
+    """Lowercase, strip punctuation, remove stopwords, drop single-char tokens.
+    Expands tokens with synonyms for better cross-domain matching."""
     words = re.sub(r'[^\w\s]', ' ', text.lower()).split()
-    return {w for w in words if w not in STOPWORDS and len(w) > 1}
+    tokens = {w for w in words if w not in STOPWORDS and len(w) > 1}
+    # Expand synonyms
+    expanded = set(tokens)
+    for t in tokens:
+        if t in SYNONYMS:
+            expanded.update(SYNONYMS[t])
+    return expanded
 
 
 def _compute_relevance(query: str, title: str) -> float:

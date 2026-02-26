@@ -174,6 +174,8 @@ The Judge Agent must:
 5. Note any contradictions between sources
 6. Extract the top 3-5 actionable insights
 
+7. **Cross-platform signals are the strongest evidence.** When items have `[also on: Reddit, HN]` or similar tags, it means the same story appears across multiple platforms. Lead with these cross-platform findings - they're the most important signals in the research.
+
 **Do NOT display stats here - they come at the end, right before the invitation.**
 
 ---

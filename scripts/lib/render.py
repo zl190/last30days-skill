@@ -12,10 +12,24 @@ OUTPUT_DIR = Path.home() / ".local" / "share" / "last30days" / "out"
 
 
 def _xref_tag(item) -> str:
-    """Return ' [xref: X1, HN3]' string if item has cross_refs, else ''."""
+    """Return ' [also on: Reddit, HN]' string if item has cross_refs, else ''."""
     refs = getattr(item, 'cross_refs', None)
-    if refs:
-        return f" [xref: {', '.join(refs)}]"
+    if not refs:
+        return ""
+    source_names = set()
+    for ref_id in refs:
+        if ref_id.startswith('R'):
+            source_names.add('Reddit')
+        elif ref_id.startswith('X'):
+            source_names.add('X')
+        elif ref_id.startswith('YT'):
+            source_names.add('YouTube')
+        elif ref_id.startswith('HN'):
+            source_names.add('HN')
+        elif ref_id.startswith('W'):
+            source_names.add('Web')
+    if source_names:
+        return f" [also on: {', '.join(sorted(source_names))}]"
     return ""
 
 
