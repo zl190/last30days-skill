@@ -436,12 +436,12 @@ def _run_supplemental(
     has_handles = entities["x_handles"] and x_source == "bird"
     has_subs = entities["reddit_subreddits"] and not skip_reddit
 
-    # Check if resolved handle is new (not already in extracted entities)
-    has_resolved = (
-        resolved_handle
-        and x_source == "bird"
-        and resolved_handle.lower() not in {h.lower() for h in entities["x_handles"]}
-    )
+    # Always run unfiltered search for resolved handle (even if entity-extracted).
+    # Entity-extracted handles get topic-filtered queries (from:handle topic),
+    # but resolved handles need UNFILTERED search (from:handle) to find posts
+    # that don't mention the topic string (e.g. Dor Brothers' viral tweet about
+    # Logan Paul doesn't contain "dor brothers" in the text).
+    has_resolved = bool(resolved_handle) and x_source == "bird"
 
     if not has_handles and not has_subs and not has_resolved:
         return [], []
@@ -471,7 +471,7 @@ def _run_supplemental(
     x_future = None
     resolved_future = None
 
-    max_workers = sum([has_subs, has_handles, has_resolved])
+    max_workers = sum([bool(has_subs), bool(has_handles), bool(has_resolved)])
     with ThreadPoolExecutor(max_workers=max(max_workers, 1)) as executor:
         if has_subs:
             reddit_future = executor.submit(
