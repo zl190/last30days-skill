@@ -1,6 +1,6 @@
 ---
 name: last30days
-version: "2.1"
+version: "2.5"
 description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
@@ -30,7 +30,7 @@ metadata:
       - prompts
 ---
 
-# last30days v2.1: Research Any Topic from the Last 30 Days
+# last30days v2.5: Research Any Topic from the Last 30 Days
 
 Research ANY topic across Reddit, X, YouTube, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 
