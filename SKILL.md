@@ -1,12 +1,11 @@
 ---
 name: last30days
-version: "2.5"
+version: "2.6"
 description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
 homepage: https://github.com/mvanhorn/last30days-skill
 user-invocable: true
-disable-model-invocation: true
 metadata:
   clawdbot:
     emoji: "📰"
@@ -109,6 +108,35 @@ If you find a clear, verified handle, pass it as `--x-handle={handle}` (without 
 - WebSearch shows no official X account exists for this entity
 
 Store: `RESOLVED_HANDLE = {handle or empty}`
+
+---
+
+## Agent Mode (--agent flag)
+
+If `--agent` appears in ARGUMENTS (e.g., `/last30days plaud granola --agent`):
+
+1. **Skip** the intro display block ("I'll research X across Reddit...")
+2. **Skip** any `AskUserQuestion` calls - use `TARGET_TOOL = "unknown"` if not specified
+3. **Run** the research script and WebSearch exactly as normal
+4. **Skip** the "WAIT FOR USER RESPONSE" pause
+5. **Skip** the follow-up invitation ("I'm now an expert on X...")
+6. **Output** the complete research report and stop - do not wait for further input
+
+Agent mode report format:
+
+```
+## Research Report: {TOPIC}
+Generated: {date} | Sources: Reddit, X, YouTube, HN, Polymarket, Web
+
+### Key Findings
+[3-5 bullet points, highest-signal insights with citations]
+
+### What I learned
+{The full "What I learned" synthesis from normal output}
+
+### Stats
+{The standard stats block}
+```
 
 ---
 
@@ -556,7 +584,7 @@ Want another prompt? Just tell me what you're creating next.
 - Does not log, cache, or write API keys to output files
 - Does not send data to any endpoint not listed above
 - Hacker News and Polymarket sources are always available (no API key, no binary dependency)
-- Cannot be invoked autonomously by the agent (`disable-model-invocation: true`)
+- Can be invoked autonomously by agents via the Skill tool (runs inline, not forked); pass `--agent` for non-interactive report output
 
 **Bundled scripts:** `scripts/last30days.py` (main research engine), `scripts/lib/` (search, enrichment, rendering modules), `scripts/lib/vendor/bird-search/` (vendored X search client, MIT licensed)
 
