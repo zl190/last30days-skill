@@ -59,8 +59,6 @@ def run_actor_sync(
     Returns:
         List of result dicts from the actor's default dataset
     """
-    _log(f"Running actor {actor_id} (timeout={timeout_secs}s)")
-
     run = client.actor(actor_id).call(
         run_input=run_input,
         timeout_secs=timeout_secs,
@@ -72,12 +70,11 @@ def run_actor_sync(
 
     if max_items and len(items) > max_items:
         items = items[:max_items]
-
-    _log(f"Actor {actor_id} returned {len(items)} items")
     return items
 
 
 def _log(msg: str):
-    """Log to stderr."""
-    sys.stderr.write(f"[Apify] {msg}\n")
-    sys.stderr.flush()
+    """Log to stderr (only in interactive terminals; spinner handles non-TTY)."""
+    if sys.stderr.isatty():
+        sys.stderr.write(f"[Apify] {msg}\n")
+        sys.stderr.flush()
