@@ -146,6 +146,7 @@ from lib import (
     score,
     ui,
     tiktok,
+    websearch,
     xai_x,
     youtube_yt,
 )
