@@ -668,6 +668,7 @@ def run_research(
     resolved_handle: str = None,
     do_hackernews: bool = True,
     do_polymarket: bool = True,
+    no_native_web: bool = False,
 ) -> tuple:
     """Run the research pipeline.
 
@@ -704,7 +705,7 @@ def run_research(
 
     # Determine web search mode
     do_web = sources in ("all", "web", "reddit-web", "x-web")
-    web_backend = env.get_web_search_source(config) if do_web else None
+    web_backend = env.get_web_search_source(config) if (do_web and not no_native_web) else None
     web_needed = do_web and not web_backend
 
     # Web-only mode
@@ -1113,6 +1114,12 @@ def main():
             "Example: --search reddit,hn  (default: all configured sources)"
         ),
     )
+    parser.add_argument(
+        "--no-native-web",
+        action="store_true",
+        default=False,
+        help="Skip native web search backends (Parallel/Brave/OpenRouter). Use when the assistant has its own WebSearch tool.",
+    )
 
     args = parser.parse_args()
 
@@ -1199,7 +1206,7 @@ def main():
         "tiktok": has_apify,
         "hackernews": True,
         "polymarket": True,
-        "web_search_backend": web_source,
+        "web_search_backend": "deferred to assistant" if args.no_native_web else web_source,
     }
     ui.show_diagnostic_banner(diag)
 
@@ -1320,6 +1327,7 @@ def main():
         resolved_handle=args.x_handle,
         do_hackernews=search_do_hackernews,
         do_polymarket=search_do_polymarket,
+        no_native_web=args.no_native_web,
     )
 
     # Processing phase
