@@ -111,7 +111,6 @@ from lib import (
     schema,
     score,
     ui,
-    websearch,
     xai_x,
     youtube_yt,
 )
@@ -154,6 +153,8 @@ def _search_reddit(
                 from_date,
                 to_date,
                 depth=depth,
+                auth_source=config.get("OPENAI_AUTH_SOURCE", "api_key"),
+                account_id=config.get("OPENAI_CHATGPT_ACCOUNT_ID"),
             )
         except http.HTTPError as e:
             raw_openai = {"error": str(e)}
@@ -176,6 +177,8 @@ def _search_reddit(
                     core,
                     from_date, to_date,
                     depth=depth,
+                    auth_source=config.get("OPENAI_AUTH_SOURCE", "api_key"),
+                    account_id=config.get("OPENAI_CHATGPT_ACCOUNT_ID"),
                 )
                 retry_items = openai_reddit.parse_reddit_response(retry_raw)
                 # Add items not already found (by URL)
@@ -1031,6 +1034,9 @@ def main():
 
     # Load config
     config = env.get_config()
+
+    # Inject .env credentials into Bird module before auth check
+    bird_x.set_credentials(config.get('AUTH_TOKEN'), config.get('CT0'))
 
     # Auto-detect Bird (no prompts - just use it if available)
     x_source_status = env.get_x_source_status(config)
