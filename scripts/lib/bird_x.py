@@ -89,9 +89,11 @@ def _extract_core_subject(topic: str) -> str:
         # Research/meta descriptors
         'best', 'top', 'good', 'great', 'awesome', 'killer',
         'latest', 'new', 'news', 'update', 'updates',
+        'trendiest', 'trending', 'hottest', 'hot', 'popular', 'viral',
         'practices', 'features', 'guide', 'tutorial',
         'recommendations', 'advice', 'review', 'reviews',
         'usecases', 'examples', 'comparison', 'versus', 'vs',
+        'plugin', 'plugins', 'skill', 'skills', 'tool', 'tools',
         # Prompting meta words
         'prompt', 'prompts', 'prompting', 'techniques', 'tips',
         'tricks', 'methods', 'strategies', 'approaches',
@@ -286,6 +288,21 @@ def search_x(
         _log(f"0 results for '{core_topic}', retrying with '{shorter}'")
         query = f"{shorter} since:{from_date}"
         response = _run_bird_search(query, count, timeout)
+        items = parse_bird_response(response)
+
+    # Last-chance retry: use strongest remaining token (often the product name)
+    if not items and core_words:
+        low_signal = {
+            'trendiest', 'trending', 'hottest', 'hot', 'popular', 'viral',
+            'best', 'top', 'latest', 'new', 'plugin', 'plugins',
+            'skill', 'skills', 'tool', 'tools',
+        }
+        candidates = [w for w in core_words if w not in low_signal]
+        if candidates:
+            strongest = max(candidates, key=len)
+            _log(f"0 results for '{core_topic}', retrying with strongest token '{strongest}'")
+            query = f"{strongest} since:{from_date}"
+            response = _run_bird_search(query, count, timeout)
 
     return response
 
