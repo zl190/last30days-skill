@@ -395,12 +395,12 @@ KEY PATTERNS from the research:
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
 ├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
 ├─ 📊 Polymarket: {N} markets │ {short summary of up to 5 most relevant market odds, e.g. "Championship: 12%, #1 Seed: 28%, Big 12: 64%, vs Kansas: 71%"}
-├─ 🌐 Web: {N} pages — [Source Name](url), [Source Name](url), [Source Name](url)
+├─ 🌐 Web: {N} pages — Source Name, Source Name, Source Name
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}
 ---
 ```
 
-**WebSearch citation note:** The WebSearch tool requires source citation. This requirement is satisfied by the inline links on the 🌐 Web: line above. Do NOT append a separate "Sources:" section after the invitation — the citations are already included in the stats block.
+**WebSearch citation note:** The WebSearch tool requires source citation. This requirement is satisfied by naming the web sources on the 🌐 Web: line above (plain names, no URLs — URLs wrap badly in terminals). Do NOT append a separate "Sources:" section after the invitation.
 
 **CRITICAL: Omit any source line that returned 0 results.** Do NOT show "0 threads", "0 stories", "0 markets", or "(no results this cycle)". If a source found nothing, DELETE that line entirely - don't include it at all.
 NEVER use plain text dashes (-) or pipe (|). ALWAYS use ├─ └─ │ and the emoji.

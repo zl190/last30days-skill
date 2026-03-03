@@ -1,7 +1,7 @@
 ---
 title: "fix: suppress trailing Sources: block from WebSearch tool mandate"
 type: fix
-status: active
+status: completed
 date: 2026-03-02
 ---
 
@@ -76,10 +76,10 @@ The WebSearch tool citation requirement is satisfied. Do NOT append a separate
 
 ## Acceptance Criteria
 
-- [ ] The trailing `Sources:` block no longer appears after the invitation
-- [ ] Web source links appear cleanly on the `🌐 Web:` stats line
+- [x] The trailing `Sources:` block no longer appears after the invitation
+- [x] Web source links appear cleanly on the `🌐 Web:` stats line
 - [ ] Manual test: run `/last30days dor brothers` and confirm no trailing Sources: block
-- [ ] Synced to all 4 destinations via `sync.sh`
+- [x] Synced to all 4 destinations via `sync.sh`
 
 ## Implementation Steps
 
