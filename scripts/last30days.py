@@ -43,6 +43,40 @@ TIMEOUT_PROFILES = {
     "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "hackernews_future": 90,  "polymarket_future": 45,  "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
 }
 
+# Valid source names for the --search flag
+VALID_SEARCH_SOURCES = {"reddit", "x", "hn", "youtube", "polymarket", "web"}
+
+
+def parse_search_flag(search_str: str) -> set:
+    """Parse and validate the --search flag value.
+
+    Args:
+        search_str: Comma-separated source names (e.g. "reddit,hn")
+
+    Returns:
+        Set of validated source names
+
+    Raises:
+        SystemExit: If invalid sources are specified
+    """
+    sources = set()
+    for s in search_str.split(","):
+        s = s.strip().lower()
+        if not s:
+            continue
+        if s not in VALID_SEARCH_SOURCES:
+            print(
+                f"Error: Unknown search source '{s}'. "
+                f"Valid: {', '.join(sorted(VALID_SEARCH_SOURCES))}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        sources.add(s)
+    if not sources:
+        print("Error: --search requires at least one source.", file=sys.stderr)
+        sys.exit(1)
+    return sources
+
 
 def register_child_pid(pid: int):
     """Track a child process for cleanup."""
@@ -600,6 +634,8 @@ def run_research(
     run_youtube: bool = False,
     timeouts: dict = None,
     resolved_handle: str = None,
+    do_hackernews: bool = True,
+    do_polymarket: bool = True,
 ) -> tuple:
     """Run the research pipeline.
 
@@ -677,8 +713,8 @@ def run_research(
     # Determine which searches to run
     do_reddit = sources in ("both", "reddit", "all", "reddit-web")
     do_x = sources in ("both", "x", "all", "x-web")
-    do_hackernews = True  # HN is always available (no API key)
-    do_polymarket = True  # Polymarket is always available (no API key)
+    # do_hackernews / do_polymarket are always True by default, but can be
+    # restricted via the --search flag to run a focused source subset.
 
     # Run Reddit, X, YouTube, HN, Polymarket, and Web searches in parallel
     reddit_future = None
@@ -1006,6 +1042,17 @@ def main():
         metavar="HANDLE",
         help="Resolved X handle for topic entity (without @). Searched unfiltered in Phase 2.",
     )
+    parser.add_argument(
+        "--search",
+        type=str,
+        default=None,
+        metavar="SOURCES",
+        help=(
+            "Comma-separated list of sources to run. "
+            f"Valid: {', '.join(sorted(VALID_SEARCH_SOURCES))}. "
+            "Example: --search reddit,hn  (default: all configured sources)"
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -1163,6 +1210,29 @@ def main():
     else:
         mode = sources
 
+    # Apply --search flag: restrict sources to the specified subset
+    search_do_hackernews = True
+    search_do_polymarket = True
+    search_run_youtube = has_ytdlp
+    if args.search:
+        search_sources = parse_search_flag(args.search)
+        has_reddit = "reddit" in search_sources
+        has_x = "x" in search_sources
+        search_do_hackernews = "hn" in search_sources
+        search_do_polymarket = "polymarket" in search_sources
+        search_run_youtube = "youtube" in search_sources and has_ytdlp
+        include_search_web = "web" in search_sources
+        # Map to existing sources string
+        if has_reddit and has_x:
+            sources = "both" + ("-web" if include_search_web else "")
+            sources = "all" if include_search_web else "both"
+        elif has_reddit:
+            sources = "reddit-web" if include_search_web else "reddit"
+        elif has_x:
+            sources = "x-web" if include_search_web else "x"
+        else:
+            sources = "web"  # hn/polymarket only; no Reddit/X
+
     # Run research
     reddit_items, x_items, youtube_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, hackernews_error, polymarket_error, web_error = run_research(
         args.topic,
@@ -1175,9 +1245,11 @@ def main():
         args.mock,
         progress,
         x_source=x_source or "xai",
-        run_youtube=has_ytdlp,
+        run_youtube=search_run_youtube,
         timeouts=timeouts,
         resolved_handle=args.x_handle,
+        do_hackernews=search_do_hackernews,
+        do_polymarket=search_do_polymarket,
     )
 
     # Processing phase
