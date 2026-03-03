@@ -165,7 +165,7 @@ if [ -z "${SKILL_ROOT:-}" ]; then
   exit 1
 fi
 
-python3 "${SKILL_ROOT}/scripts/last30days.py" "$ARGUMENTS" --emit=compact --no-native-web  # Add --x-handle=HANDLE if RESOLVED_HANDLE is set
+python3 "${SKILL_ROOT}/scripts/last30days.py" $ARGUMENTS --emit=compact --no-native-web  # Add --x-handle=HANDLE if RESOLVED_HANDLE is set
 ```
 
 Use a **timeout of 300000** (5 minutes) on the Bash call. The script typically takes 1-3 minutes.
@@ -225,6 +225,11 @@ For ALL query types:
 - `--quick` → Faster, fewer sources (8-12 each)
 - (default) → Balanced (20-30 each)
 - `--deep` → Comprehensive (50-70 Reddit, 40-60 X)
+- `--store` → Persist findings to SQLite database for later querying
+- `--search=SOURCES` → Comma-separated source filter (e.g., `--search=reddit,hn`)
+- `--include-web` → Include general web search alongside primary sources
+- `--diagnose` → Show source availability diagnostics and exit
+- `--timeout=SECS` → Global timeout in seconds (default: 180, quick: 90, deep: 300)
 
 ---
 

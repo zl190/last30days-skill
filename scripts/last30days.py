@@ -1037,7 +1037,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Research a topic from the last N days on Reddit + X"
     )
-    parser.add_argument("topic", nargs="?", help="Topic to research")
+    parser.add_argument("topic", nargs="*", help="Topic to research")
     parser.add_argument("--mock", action="store_true", help="Use fixtures")
     parser.add_argument(
         "--emit",
@@ -1122,6 +1122,7 @@ def main():
     )
 
     args = parser.parse_args()
+    args.topic = " ".join(args.topic) if args.topic else None
 
     # Enable debug logging if requested
     if args.debug:
