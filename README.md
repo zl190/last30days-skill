@@ -4,7 +4,7 @@
 
 **New in V2.7 — TikTok as a source:**
 
-TikTok is now the 7th signal source. Search any topic and get viral TikTok videos with views, likes, hashtags, and extracted captions — scored and ranked alongside Reddit, X, and YouTube. Powered by [Apify](https://apify.com) with a BYO API key ($5/month free credits, no credit card). [Details below.](#whats-new-in-v27)
+TikTok is now the 7th signal source. Search any topic and get viral TikTok videos with views, likes, hashtags, and extracted captions — scored and ranked alongside Reddit, X, and YouTube. Powered by [ScrapeCreators](https://scrapecreators.com) - 100 free credits, pay-as-you-go after that, no subscription required. [Details below.](#whats-new-in-v27)
 
 **New in V2.5 - dramatically better results:**
 
@@ -33,7 +33,7 @@ mkdir -p ~/.config/last30days
 cat > ~/.config/last30days/.env << 'EOF'
 OPENAI_API_KEY=sk-...      # optional if using `codex login`
 XAI_API_KEY=xai-...        # optional - cookie auth is default for X search
-APIFY_API_TOKEN=apify_...  # optional - for TikTok (free $5/mo at apify.com)
+SCRAPECREATORS_API_KEY=sc_...  # optional - for TikTok (100 free credits at scrapecreators.com, no subscription)
 EOF
 chmod 600 ~/.config/last30days/.env
 ```
@@ -954,13 +954,11 @@ Search "Leah Halton" and TikTok is the primary signal:
 - @looooooooch: 108.8M views — her "Recreation #Inverted" viral hit
 - @allyouseeisai: 17.7M views — AI-generated content of her
 
-**Powered by [Apify](https://apify.com)** — sign up for free ($5/month credits, no credit card) and add your token:
+**Powered by [ScrapeCreators](https://scrapecreators.com)** — 100 free credits, then pay-as-you-go. No subscription required. Sign up and add your key:
 
 ```bash
-echo 'APIFY_API_TOKEN=apify_api_...' >> ~/.config/last30days/.env
+echo 'SCRAPECREATORS_API_KEY=sc_...' >> ~/.config/last30days/.env
 ```
-
-The shared Apify client wrapper is designed for future Facebook and Instagram sources using the same token.
 
 ---
 
@@ -1107,7 +1105,7 @@ Thanks to the contributors who helped shape V2:
 | `youtube.com` (via yt-dlp) | Search query | None (public search) |
 | `hn.algolia.com` | Search query | None (public API) |
 | `gamma-api.polymarket.com` | Search query | None (public API) |
-| `api.apify.com` | Search query (TikTok) | APIFY_API_TOKEN |
+| `api.scrapecreators.com` | Search query (TikTok) | SCRAPECREATORS_API_KEY |
 | `api.search.brave.com` | Search query (optional) | BRAVE_API_KEY |
 | `api.parallel.ai` | Search query (optional) | PARALLEL_API_KEY |
 | `openrouter.ai` | Search query (optional) | OPENROUTER_API_KEY |

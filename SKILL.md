@@ -590,7 +590,7 @@ Want another prompt? Just tell me what you're creating next.
 - Sends search queries to Algolia HN Search API (`hn.algolia.com`) for Hacker News story and comment discovery (free, no auth)
 - Sends search queries to Polymarket Gamma API (`gamma-api.polymarket.com`) for prediction market discovery (free, no auth)
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
-- Sends search queries to Apify API (`api.apify.com`) for TikTok search and caption extraction (requires APIFY_API_TOKEN, free tier: $5/month credits)
+- Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for TikTok search and caption extraction (requires SCRAPECREATORS_API_KEY, 100 free credits, PAYG after that, no subscription)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics
 - Stores research findings in local SQLite database (watchlist mode only)
@@ -602,7 +602,7 @@ Want another prompt? Just tell me what you're creating next.
 - Does not log, cache, or write API keys to output files
 - Does not send data to any endpoint not listed above
 - Hacker News and Polymarket sources are always available (no API key, no binary dependency)
-- TikTok source requires APIFY_API_TOKEN (sign up at apify.com for free $5/month credits, no CC)
+- TikTok source requires SCRAPECREATORS_API_KEY (sign up at scrapecreators.com, 100 free credits, PAYG, no subscription)
 - Can be invoked autonomously by agents via the Skill tool (runs inline, not forked); pass `--agent` for non-interactive report output
 
 **Bundled scripts:** `scripts/last30days.py` (main research engine), `scripts/lib/` (search, enrichment, rendering modules), `scripts/lib/vendor/bird-search/` (vendored X search client, MIT licensed)
