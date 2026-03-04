@@ -4,7 +4,7 @@ from typing import Any, Dict, List, TypeVar, Union
 
 from . import dates, schema
 
-T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.TikTokItem, schema.HackerNewsItem, schema.PolymarketItem)
+T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.TikTokItem, schema.InstagramItem, schema.HackerNewsItem, schema.PolymarketItem)
 
 
 def filter_by_date_range(
@@ -232,6 +232,52 @@ def normalize_tiktok_items(
 
         normalized.append(schema.TikTokItem(
             id=f"TK{i+1}",
+            text=item.get("text", ""),
+            url=item.get("url", ""),
+            author_name=item.get("author_name", ""),
+            date=date_str,
+            date_confidence="high",
+            engagement=engagement,
+            caption_snippet=item.get("caption_snippet", ""),
+            hashtags=item.get("hashtags", []),
+            relevance=item.get("relevance", 0.7),
+            why_relevant=item.get("why_relevant", ""),
+        ))
+
+    return normalized
+
+
+def normalize_instagram_items(
+    items: List[Dict[str, Any]],
+    from_date: str,
+    to_date: str,
+) -> List[schema.InstagramItem]:
+    """Normalize raw Instagram items to schema.
+
+    Args:
+        items: Raw Instagram items from ScrapeCreators
+        from_date: Start of date range
+        to_date: End of date range
+
+    Returns:
+        List of InstagramItem objects
+    """
+    normalized = []
+
+    for i, item in enumerate(items):
+        # Parse engagement
+        eng_raw = item.get("engagement") or {}
+        engagement = schema.Engagement(
+            views=eng_raw.get("views"),
+            likes=eng_raw.get("likes"),
+            num_comments=eng_raw.get("comments"),
+        )
+
+        # Instagram dates are reliable (exact timestamps from ScrapeCreators)
+        date_str = item.get("date")
+
+        normalized.append(schema.InstagramItem(
+            id=f"IG{i+1}",
             text=item.get("text", ""),
             url=item.get("url", ""),
             author_name=item.get("author_name", ""),

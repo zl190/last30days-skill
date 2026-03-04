@@ -339,6 +339,65 @@ def score_tiktok_items(items: List[schema.TikTokItem]) -> List[schema.TikTokItem
     return items
 
 
+def compute_instagram_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
+    """Compute raw engagement score for Instagram item.
+
+    Formula: 0.50*log1p(views) + 0.30*log1p(likes) + 0.20*log1p(comments)
+    Views dominate on Instagram Reels — they're the primary discovery signal.
+    """
+    if engagement is None:
+        return None
+
+    if engagement.views is None and engagement.likes is None:
+        return None
+
+    views = log1p_safe(engagement.views)
+    likes = log1p_safe(engagement.likes)
+    comments = log1p_safe(engagement.num_comments)
+
+    return 0.50 * views + 0.30 * likes + 0.20 * comments
+
+
+def score_instagram_items(items: List[schema.InstagramItem]) -> List[schema.InstagramItem]:
+    """Compute scores for Instagram items.
+
+    Uses same weight structure as TikTok (relevance + recency + engagement).
+    """
+    if not items:
+        return items
+
+    eng_raw = [compute_instagram_engagement_raw(item.engagement) for item in items]
+    eng_normalized = normalize_to_100(eng_raw)
+
+    for i, item in enumerate(items):
+        rel_score = int(item.relevance * 100)
+        rec_score = dates.recency_score(item.date)
+
+        if eng_normalized[i] is not None:
+            eng_score = int(eng_normalized[i])
+        else:
+            eng_score = DEFAULT_ENGAGEMENT
+
+        item.subs = schema.SubScores(
+            relevance=rel_score,
+            recency=rec_score,
+            engagement=eng_score,
+        )
+
+        overall = (
+            WEIGHT_RELEVANCE * rel_score +
+            WEIGHT_RECENCY * rec_score +
+            WEIGHT_ENGAGEMENT * eng_score
+        )
+
+        if eng_raw[i] is None:
+            overall -= UNKNOWN_ENGAGEMENT_PENALTY
+
+        item.score = max(0, min(100, int(overall)))
+
+    return items
+
+
 def compute_hackernews_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
     """Compute raw engagement score for Hacker News item.
 
@@ -512,7 +571,7 @@ def score_websearch_items(items: List[schema.WebSearchItem]) -> List[schema.WebS
     return items
 
 
-def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.TikTokItem, schema.HackerNewsItem, schema.PolymarketItem]]) -> List:
+def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.TikTokItem, schema.InstagramItem, schema.HackerNewsItem, schema.PolymarketItem]]) -> List:
     """Sort items by score (descending), then date, then source priority.
 
     Args:
@@ -538,12 +597,14 @@ def sort_items(items: List[Union[schema.RedditItem, schema.XItem, schema.WebSear
             source_priority = 2
         elif isinstance(item, schema.TikTokItem):
             source_priority = 3
-        elif isinstance(item, schema.HackerNewsItem):
+        elif isinstance(item, schema.InstagramItem):
             source_priority = 4
-        elif isinstance(item, schema.PolymarketItem):
+        elif isinstance(item, schema.HackerNewsItem):
             source_priority = 5
-        else:  # WebSearchItem
+        elif isinstance(item, schema.PolymarketItem):
             source_priority = 6
+        else:  # WebSearchItem
+            source_priority = 7
 
         # Quaternary: title/text for stability
         text = getattr(item, "title", "") or getattr(item, "text", "")

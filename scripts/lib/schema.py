@@ -276,6 +276,45 @@ class TikTokItem:
 
 
 @dataclass
+class InstagramItem:
+    """Normalized Instagram item."""
+    id: str                    # "IG1", "IG2", ...
+    text: str                  # caption text
+    url: str                   # https://www.instagram.com/reel/{code}
+    author_name: str           # Instagram handle
+    date: Optional[str] = None
+    date_confidence: str = "high"  # ScrapeCreators provides exact timestamps
+    engagement: Optional[Engagement] = None  # views, likes, num_comments
+    caption_snippet: str = ""  # spoken-word caption (if available), else text
+    hashtags: List[str] = field(default_factory=list)
+    relevance: float = 0.7
+    why_relevant: str = ""
+    subs: SubScores = field(default_factory=SubScores)
+    score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {
+            'id': self.id,
+            'text': self.text,
+            'url': self.url,
+            'author_name': self.author_name,
+            'date': self.date,
+            'date_confidence': self.date_confidence,
+            'engagement': self.engagement.to_dict() if self.engagement else None,
+            'caption_snippet': self.caption_snippet,
+            'hashtags': self.hashtags,
+            'relevance': self.relevance,
+            'why_relevant': self.why_relevant,
+            'subs': self.subs.to_dict(),
+            'score': self.score,
+        }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
+
+
+@dataclass
 class HackerNewsItem:
     """Normalized Hacker News item."""
     id: str           # "HN1", "HN2", ...
@@ -374,6 +413,7 @@ class Report:
     web: List[WebSearchItem] = field(default_factory=list)
     youtube: List[YouTubeItem] = field(default_factory=list)
     tiktok: List[TikTokItem] = field(default_factory=list)
+    instagram: List[InstagramItem] = field(default_factory=list)
     hackernews: List[HackerNewsItem] = field(default_factory=list)
     polymarket: List[PolymarketItem] = field(default_factory=list)
     best_practices: List[str] = field(default_factory=list)
@@ -385,6 +425,7 @@ class Report:
     web_error: Optional[str] = None
     youtube_error: Optional[str] = None
     tiktok_error: Optional[str] = None
+    instagram_error: Optional[str] = None
     hackernews_error: Optional[str] = None
     polymarket_error: Optional[str] = None
     # Handle resolution
@@ -409,6 +450,7 @@ class Report:
             'web': [w.to_dict() for w in self.web],
             'youtube': [y.to_dict() for y in self.youtube],
             'tiktok': [t.to_dict() for t in self.tiktok],
+            'instagram': [ig.to_dict() for ig in self.instagram],
             'hackernews': [h.to_dict() for h in self.hackernews],
             'polymarket': [p.to_dict() for p in self.polymarket],
             'best_practices': self.best_practices,
@@ -427,6 +469,8 @@ class Report:
             d['youtube_error'] = self.youtube_error
         if self.tiktok_error:
             d['tiktok_error'] = self.tiktok_error
+        if self.instagram_error:
+            d['instagram_error'] = self.instagram_error
         if self.hackernews_error:
             d['hackernews_error'] = self.hackernews_error
         if self.polymarket_error:
@@ -558,6 +602,30 @@ class Report:
                 cross_refs=t.get('cross_refs', []),
             ))
 
+        # Reconstruct Instagram items
+        ig_items = []
+        for ig in data.get('instagram', []):
+            eng = None
+            if ig.get('engagement'):
+                eng = Engagement(**ig['engagement'])
+            subs = SubScores(**ig.get('subs', {})) if ig.get('subs') else SubScores()
+            ig_items.append(InstagramItem(
+                id=ig['id'],
+                text=ig.get('text', ''),
+                url=ig['url'],
+                author_name=ig.get('author_name', ''),
+                date=ig.get('date'),
+                date_confidence=ig.get('date_confidence', 'high'),
+                engagement=eng,
+                caption_snippet=ig.get('caption_snippet', ''),
+                hashtags=ig.get('hashtags', []),
+                relevance=ig.get('relevance', 0.7),
+                why_relevant=ig.get('why_relevant', ''),
+                subs=subs,
+                score=ig.get('score', 0),
+                cross_refs=ig.get('cross_refs', []),
+            ))
+
         # Reconstruct HackerNews items
         hn_items = []
         for h in data.get('hackernews', []):
@@ -623,6 +691,7 @@ class Report:
             web=web_items,
             youtube=youtube_items,
             tiktok=tiktok_items,
+            instagram=ig_items,
             hackernews=hn_items,
             polymarket=pm_items,
             best_practices=data.get('best_practices', []),
@@ -633,6 +702,7 @@ class Report:
             web_error=data.get('web_error'),
             youtube_error=data.get('youtube_error'),
             tiktok_error=data.get('tiktok_error'),
+            instagram_error=data.get('instagram_error'),
             hackernews_error=data.get('hackernews_error'),
             polymarket_error=data.get('polymarket_error'),
             resolved_x_handle=data.get('resolved_x_handle'),

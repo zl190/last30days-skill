@@ -421,6 +421,20 @@ def get_tiktok_token(config: Dict[str, Any]) -> str:
     return config.get('SCRAPECREATORS_API_KEY') or config.get('APIFY_API_TOKEN') or ''
 
 
+def is_instagram_available(config: Dict[str, Any]) -> bool:
+    """Check if Instagram source is available (ScrapeCreators).
+
+    Returns True if SCRAPECREATORS_API_KEY is set.
+    Instagram uses the same key as TikTok.
+    """
+    return bool(config.get('SCRAPECREATORS_API_KEY'))
+
+
+def get_instagram_token(config: Dict[str, Any]) -> str:
+    """Get Instagram API token (same ScrapeCreators key as TikTok)."""
+    return config.get('SCRAPECREATORS_API_KEY') or ''
+
+
 # Backward compat alias
 is_apify_available = is_tiktok_available
 

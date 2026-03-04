@@ -46,7 +46,7 @@ def jaccard_similarity(set1: Set[str], set2: Set[str]) -> float:
 
 
 AnyItem = Union[schema.RedditItem, schema.XItem, schema.YouTubeItem, schema.TikTokItem,
-                schema.HackerNewsItem, schema.PolymarketItem, schema.WebSearchItem]
+                schema.InstagramItem, schema.HackerNewsItem, schema.PolymarketItem, schema.WebSearchItem]
 
 
 def get_item_text(item: AnyItem) -> str:
@@ -58,6 +58,8 @@ def get_item_text(item: AnyItem) -> str:
     elif isinstance(item, schema.YouTubeItem):
         return f"{item.title} {item.channel_name}"
     elif isinstance(item, schema.TikTokItem):
+        return f"{item.text} {item.author_name}"
+    elif isinstance(item, schema.InstagramItem):
         return f"{item.text} {item.author_name}"
     elif isinstance(item, schema.PolymarketItem):
         return f"{item.title} {item.question}"
@@ -77,6 +79,8 @@ def _get_cross_source_text(item: AnyItem) -> str:
     if isinstance(item, schema.XItem):
         return item.text[:100]
     if isinstance(item, schema.TikTokItem):
+        return item.text[:100]
+    if isinstance(item, schema.InstagramItem):
         return item.text[:100]
     if isinstance(item, schema.HackerNewsItem):
         title = item.title
@@ -203,6 +207,14 @@ def dedupe_tiktok(
     threshold: float = 0.7,
 ) -> List[schema.TikTokItem]:
     """Dedupe TikTok items."""
+    return dedupe_items(items, threshold)
+
+
+def dedupe_instagram(
+    items: List[schema.InstagramItem],
+    threshold: float = 0.7,
+) -> List[schema.InstagramItem]:
+    """Dedupe Instagram items."""
     return dedupe_items(items, threshold)
 
 

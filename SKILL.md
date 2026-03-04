@@ -1,7 +1,7 @@
 ---
 name: last30days
-version: "2.7"
-description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, TikTok, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
+version: "2.8"
+description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, YouTube, TikTok, Instagram, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
 homepage: https://github.com/mvanhorn/last30days-skill
@@ -30,7 +30,7 @@ metadata:
       - prompts
 ---
 
-# last30days v2.7: Research Any Topic from the Last 30 Days
+# last30days v2.8: Research Any Topic from the Last 30 Days
 
 Research ANY topic across Reddit, X, YouTube, TikTok, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 
@@ -165,21 +165,23 @@ if [ -z "${SKILL_ROOT:-}" ]; then
   exit 1
 fi
 
-python3 "${SKILL_ROOT}/scripts/last30days.py" $ARGUMENTS --emit=compact --no-native-web  # Add --x-handle=HANDLE if RESOLVED_HANDLE is set
+python3 "${SKILL_ROOT}/scripts/last30days.py" "$ARGUMENTS" --emit=compact --no-native-web  # Add --x-handle=HANDLE if RESOLVED_HANDLE is set
 ```
 
 Use a **timeout of 300000** (5 minutes) on the Bash call. The script typically takes 1-3 minutes.
 
 The script will automatically:
 - Detect available API keys
-- Run Reddit/X/YouTube/TikTok/Hacker News/Polymarket searches
-- Output ALL results including YouTube transcripts, TikTok captions, HN comments, and prediction market odds
+- Run Reddit/X/YouTube/TikTok/Instagram/Hacker News/Polymarket searches
+- Output ALL results including YouTube transcripts, TikTok captions, Instagram captions, HN comments, and prediction market odds
 
-**Read the ENTIRE output.** It contains SEVEN data sections in this order: Reddit items, X items, YouTube items, TikTok items, Hacker News items, Polymarket items, and WebSearch items. If you miss sections, you will produce incomplete stats.
+**Read the ENTIRE output.** It contains EIGHT data sections in this order: Reddit items, X items, YouTube items, TikTok items, Instagram Reels items, Hacker News items, Polymarket items, and WebSearch items. If you miss sections, you will produce incomplete stats.
 
 **YouTube items in the output look like:** `**{video_id}** (score:N) {channel_name} [N views, N likes]` followed by a title, URL, and optional transcript snippet. Count them and include them in your synthesis and stats block.
 
 **TikTok items in the output look like:** `**{TK_id}** (score:N) @{creator} [N views, N likes]` followed by a caption, URL, hashtags, and optional caption snippet. Count them and include them in your synthesis and stats block.
+
+**Instagram Reels items in the output look like:** `**{IG_id}** (score:N) @{creator} (date) [N views, N likes]` followed by caption text, URL, and optional transcript. Count them and include them in your synthesis and stats block. Instagram provides unique creator/influencer perspective — weight it alongside TikTok.
 
 ---
 
@@ -225,11 +227,6 @@ For ALL query types:
 - `--quick` → Faster, fewer sources (8-12 each)
 - (default) → Balanced (20-30 each)
 - `--deep` → Comprehensive (50-70 Reddit, 40-60 X)
-- `--store` → Persist findings to SQLite database for later querying
-- `--search=SOURCES` → Comma-separated source filter (e.g., `--search=reddit,hn`)
-- `--include-web` → Include general web search alongside primary sources
-- `--diagnose` → Show source availability diagnostics and exit
-- `--timeout=SECS` → Global timeout in seconds (default: 180, quick: 90, deep: 300)
 
 ---
 
@@ -351,18 +348,20 @@ CITATION PRIORITY (most to least preferred):
 2. r/subreddits from Reddit — "per r/subreddit"
 3. YouTube channels — "per [channel name] on YouTube" (transcript-backed insights)
 4. TikTok creators — "per @creator on TikTok" (viral/trending signal)
-5. HN discussions — "per HN" or "per hn/username" (developer community signal)
-6. Polymarket — "Polymarket has X at Y% (up/down Z%)" with specific odds and movement
-7. Web sources — ONLY when Reddit/X/YouTube/TikTok/HN/Polymarket don't cover that specific fact
+5. Instagram creators — "per @creator on Instagram" (influencer/creator signal)
+6. HN discussions — "per HN" or "per hn/username" (developer community signal)
+7. Polymarket — "Polymarket has X at Y% (up/down Z%)" with specific odds and movement
+8. Web sources — ONLY when Reddit/X/YouTube/TikTok/Instagram/HN/Polymarket don't cover that specific fact
 
 The tool's value is surfacing what PEOPLE are saying, not what journalists wrote.
 When both a web article and an X post cover the same fact, cite the X post.
 
-URL FORMATTING: NEVER paste raw URLs in the output.
+URL FORMATTING: NEVER paste raw URLs anywhere in the output — not in synthesis, not in stats, not in sources.
 - **BAD:** "per https://www.rollingstone.com/music/music-news/kanye-west-bully-1235506094/"
 - **GOOD:** "per Rolling Stone"
-- **GOOD:** "per Complex"
-Use the publication name, not the URL. The user doesn't need links — they need clean, readable text.
+- **BAD stats line:** `🌐 Web: 10 pages — https://later.com/blog/..., https://buffer.com/...`
+- **GOOD stats line:** `🌐 Web: 10 pages — Later, Buffer, CNN, SocialBee`
+Use the publication/site name, not the URL. The user doesn't need links — they need clean, readable text.
 
 **BAD:** "His album is set for March 20 (per Rolling Stone; Billboard; Complex)."
 **GOOD:** "His album BULLY drops March 20 — fans on X are split on the tracklist, per @honest30bgfan_"
@@ -404,6 +403,7 @@ KEY PATTERNS from the research:
 ├─ 🔵 X: {N} posts │ {N} likes │ {N} reposts
 ├─ 🔴 YouTube: {N} videos │ {N} views │ {N} with transcripts
 ├─ 🎵 TikTok: {N} videos │ {N} views │ {N} likes │ {N} with captions
+├─ 📸 Instagram: {N} reels │ {N} views │ {N} likes │ {N} with captions
 ├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
 ├─ 📊 Polymarket: {N} markets │ {short summary of up to 5 most relevant market odds, e.g. "Championship: 12%, #1 Seed: 28%, Big 12: 64%, vs Kansas: 71%"}
 ├─ 🌐 Web: {N} pages — Source Name, Source Name, Source Name
@@ -411,7 +411,18 @@ KEY PATTERNS from the research:
 ---
 ```
 
-**WebSearch citation note:** The WebSearch tool requires source citation. This requirement is satisfied by naming the web sources on the 🌐 Web: line above (plain names, no URLs — URLs wrap badly in terminals). Do NOT append a separate "Sources:" section after the invitation.
+**🌐 Web: line — how to extract site names from URLs:**
+Strip the protocol, path, and `www.` — use the recognizable publication name:
+- `https://later.com/blog/instagram-reels-trends/` → **Later**
+- `https://socialbee.com/blog/instagram-trends/` → **SocialBee**
+- `https://buffer.com/resources/instagram-algorithms/` → **Buffer**
+- `https://www.cnn.com/2026/02/22/tech/...` → **CNN**
+- `https://medium.com/the-ai-studio/...` → **Medium**
+- `https://radicaldatascience.wordpress.com/...` → **Radical Data Science**
+List as comma-separated plain names: `Later, SocialBee, Buffer, CNN, Medium`
+
+**⚠️ WebSearch citation — ALREADY SATISFIED. DO NOT ADD A SOURCES SECTION.**
+The WebSearch tool mandates source citation. That requirement is FULLY satisfied by the source names on the 🌐 Web: line above. Do NOT append a separate "Sources:" section at the end of your response. Do NOT list URLs anywhere. The 🌐 Web: line IS your citation. Nothing more is needed.
 
 **CRITICAL: Omit any source line that returned 0 results.** Do NOT show "0 threads", "0 stories", "0 markets", or "(no results this cycle)". If a source found nothing, DELETE that line entirely - don't include it at all.
 NEVER use plain text dashes (-) or pipe (|). ALWAYS use ├─ └─ │ and the emoji.
@@ -575,7 +586,7 @@ After delivering a prompt, end with:
 ```
 ---
 📚 Expert in: {TOPIC} for {TARGET_TOOL}
-📊 Based on: {n} Reddit threads ({sum} upvotes) + {n} X posts ({sum} likes) + {n} YouTube videos ({sum} views) + {n} TikTok videos ({sum} views) + {n} HN stories ({sum} points) + {n} web pages
+📊 Based on: {n} Reddit threads ({sum} upvotes) + {n} X posts ({sum} likes) + {n} YouTube videos ({sum} views) + {n} TikTok videos ({sum} views) + {n} Instagram reels ({sum} views) + {n} HN stories ({sum} points) + {n} web pages
 
 Want another prompt? Just tell me what you're creating next.
 ```
@@ -590,7 +601,7 @@ Want another prompt? Just tell me what you're creating next.
 - Sends search queries to Algolia HN Search API (`hn.algolia.com`) for Hacker News story and comment discovery (free, no auth)
 - Sends search queries to Polymarket Gamma API (`gamma-api.polymarket.com`) for prediction market discovery (free, no auth)
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
-- Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for TikTok search and caption extraction (requires SCRAPECREATORS_API_KEY, 100 free credits, PAYG after that, no subscription)
+- Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for TikTok and Instagram search, transcript/caption extraction (requires SCRAPECREATORS_API_KEY, PAYG after 100 free credits)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics
 - Stores research findings in local SQLite database (watchlist mode only)
@@ -602,7 +613,7 @@ Want another prompt? Just tell me what you're creating next.
 - Does not log, cache, or write API keys to output files
 - Does not send data to any endpoint not listed above
 - Hacker News and Polymarket sources are always available (no API key, no binary dependency)
-- TikTok source requires SCRAPECREATORS_API_KEY (sign up at scrapecreators.com, 100 free credits, PAYG, no subscription)
+- TikTok and Instagram sources require SCRAPECREATORS_API_KEY (same key covers both; 100 free credits, then PAYG)
 - Can be invoked autonomously by agents via the Skill tool (runs inline, not forked); pass `--agent` for non-interactive report output
 
 **Bundled scripts:** `scripts/last30days.py` (main research engine), `scripts/lib/` (search, enrichment, rendering modules), `scripts/lib/vendor/bird-search/` (vendored X search client, MIT licensed)

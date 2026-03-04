@@ -211,6 +211,16 @@ def _run_topic(topic: dict) -> dict:
                 "engagement_score": (item.get("engagement") or {}).get("views", 0),
                 "relevance_score": item.get("relevance", 0),
             })
+        for item in data.get("instagram", []):
+            findings.append({
+                "source": "instagram",
+                "url": item.get("url", ""),
+                "title": (item.get("caption_snippet", "") or "")[:120],
+                "author": item.get("author_name", ""),
+                "content": item.get("caption_snippet", ""),
+                "engagement_score": (item.get("engagement") or {}).get("views", 0),
+                "relevance_score": item.get("relevance", 0),
+            })
 
         # Store with dedup
         counts = store.store_findings(run_id, topic_id, findings)

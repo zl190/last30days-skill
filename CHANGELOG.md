@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-03-04
+
+### Highlights
+
+Instagram Reels as the 8th signal source, TikTok migrated from Apify to ScrapeCreators API, and SKILL.md quality improvements. One API key (`SCRAPECREATORS_API_KEY`) now covers both TikTok and Instagram.
+
+### Added
+
+- Instagram Reels as 8th research source via ScrapeCreators API — keyword search, engagement metrics (views, likes, comments), spoken-word transcript extraction (`scripts/lib/instagram.py`)
+- `InstagramItem` dataclass, normalization, scoring (45% relevance / 25% recency / 30% engagement), deduplication, cross-source linking, and rendering
+- Instagram in SKILL.md: stats template (`📸 Instagram:`), citation priority, item format description, output footer
+- URL-to-name extraction examples in SKILL.md for cleaner web source display
+- `--search=instagram` flag support
+
+### Changed
+
+- TikTok backend migrated from Apify to ScrapeCreators API (`api.scrapecreators.com`)
+- `APIFY_API_TOKEN` replaced by `SCRAPECREATORS_API_KEY` in config
+- SKILL.md version bumped to v2.8
+- WebSearch citation instruction strengthened to prevent trailing Sources: blocks
+- Security section updated: Apify → ScrapeCreators references
+
+### Fixed
+
+- Web stats line showing full URLs instead of plain domain names
+- Trailing "Sources:" block appearing after skill invitation (WebSearch tool mandate conflict)
+- Instagram/TikTok not running in web-only mode when `--search=instagram` used without Reddit/X
+- `$ARGUMENTS` quoting in SKILL.md for correct flag forwarding
+
 ## [2.1.0] - 2026-02-15
 
 ### Highlights
@@ -59,5 +88,6 @@ Three headline features: watchlists for always-on bots, YouTube transcripts as a
 
 Initial public release. Reddit + X search via OpenAI Responses API and xAI API.
 
+[2.8.0]: https://github.com/mvanhorn/last30days-skill/compare/v2.6.0...v2.8.0
 [2.1.0]: https://github.com/mvanhorn/last30days-skill/compare/v1.0.0...v2.1.0
 [1.0.0]: https://github.com/mvanhorn/last30days-skill/releases/tag/v1.0.0

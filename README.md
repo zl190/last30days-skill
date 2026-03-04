@@ -1,10 +1,10 @@
-# /last30days v2.7
+# /last30days v2.8
 
-**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, TikTok, Hacker News, Polymarket, and the web from the last 30 days, finds what the community is actually upvoting, sharing, betting on, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
+**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web from the last 30 days, finds what the community is actually upvoting, sharing, betting on, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
 
-**New in V2.7 — TikTok as a source:**
+**New in v2.8 — Instagram Reels + ScrapeCreators:**
 
-TikTok is now the 7th signal source. Search any topic and get viral TikTok videos with views, likes, hashtags, and extracted captions — scored and ranked alongside Reddit, X, and YouTube. Powered by [ScrapeCreators](https://scrapecreators.com) - 100 free credits, pay-as-you-go after that, no subscription required. [Details below.](#whats-new-in-v27)
+Instagram Reels is now the 8th signal source. TikTok and Instagram both run on [ScrapeCreators](https://scrapecreators.com) — one API key covers both. Search any topic and get trending Reels with views, likes, spoken-word transcripts, and hashtags. [Details below.](#whats-new-in-v28)
 
 **New in V2.5 - dramatically better results:**
 
@@ -33,7 +33,7 @@ mkdir -p ~/.config/last30days
 cat > ~/.config/last30days/.env << 'EOF'
 OPENAI_API_KEY=sk-...      # optional if using `codex login`
 XAI_API_KEY=xai-...        # optional - cookie auth is default for X search
-SCRAPECREATORS_API_KEY=sc_...  # optional - for TikTok (100 free credits at scrapecreators.com, no subscription)
+SCRAPECREATORS_API_KEY=... # optional - for TikTok + Instagram (scrapecreators.com)
 EOF
 chmod 600 ~/.config/last30days/.env
 ```
@@ -129,7 +129,7 @@ Examples:
 
 ## What It Does
 
-1. **Researches** - Scans Reddit, X, YouTube, TikTok, Hacker News, Polymarket, and the web for discussions from the last 30 days
+1. **Researches** - Scans Reddit, X, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web for discussions from the last 30 days
 2. **Synthesizes** - Identifies patterns, best practices, and what actually works
 3. **Delivers** - Either writes copy-paste-ready prompts for your target tool, or gives you a curated expert-level answer
 
@@ -937,29 +937,26 @@ If your OpenAI org doesn't have access to a model (e.g., unverified for gpt-4.1)
 
 ---
 
-## What's New in V2.7
+## What's New in v2.8
 
-### TikTok as a source
+### Instagram Reels as a source
 
-**See what's going viral on TikTok.** Search any topic and get the top TikTok videos with views, likes, hashtags, and extracted captions — scored and ranked alongside all other sources. Cross-source convergence detection catches when the same story trends on TikTok AND Reddit AND X.
+**See what creators are posting on Instagram.** Search any topic and get trending Reels with views, likes, spoken-word transcripts, and hashtags — scored and ranked alongside all other sources.
 
-Search "Iran Israel" and you get:
-- 🎵 TikTok: 12 videos │ 61,618,200 views │ 2,645,694 likes │ 5 with captions
-- @suaradotcom: 20.1M views — Iranian missiles striking Tel Aviv
-- @itvnews: 14.7M views — Missile getting through Iron Dome
-- @bbcnews: 12.5M views — US and Israel struck Iran, killing Khamenei
+Search "AI tools" and you get:
+- 📸 Instagram: 5 reels │ 1.4M views │ 30K likes │ 3 with transcripts
+- @danmartell: 803K views — "AI tools from 2025 vs 2026"
+- @karimehta05: 112K views — "5 AI Tools I Swear By"
 
-Search "Leah Halton" and TikTok is the primary signal:
-- 🎵 TikTok: 15 videos │ 152.6M views │ 10.9M likes │ 5 with captions
-- @looooooooch: 108.8M views — her "Recreation #Inverted" viral hit
-- @allyouseeisai: 17.7M views — AI-generated content of her
+### TikTok + Instagram on ScrapeCreators
 
-**Powered by [ScrapeCreators](https://scrapecreators.com)** — 100 free credits, then pay-as-you-go. No subscription required. Sign up and add your key:
+Both TikTok and Instagram are powered by [ScrapeCreators](https://scrapecreators.com) — one API key covers both sources. 100 free credits, then pay-as-you-go.
 
 ```bash
-echo 'SCRAPECREATORS_API_KEY=sc_...' >> ~/.config/last30days/.env
+echo 'SCRAPECREATORS_API_KEY=your_key_here' >> ~/.config/last30days/.env
 ```
 
+**Migrating from Apify?** Replace `APIFY_API_TOKEN` with `SCRAPECREATORS_API_KEY` in your config. The old key is no longer used.
 ---
 
 ## What's New in V2.5
@@ -1105,7 +1102,7 @@ Thanks to the contributors who helped shape V2:
 | `youtube.com` (via yt-dlp) | Search query | None (public search) |
 | `hn.algolia.com` | Search query | None (public API) |
 | `gamma-api.polymarket.com` | Search query | None (public API) |
-| `api.scrapecreators.com` | Search query (TikTok) | SCRAPECREATORS_API_KEY |
+| `api.scrapecreators.com` | Search query (TikTok + Instagram) | SCRAPECREATORS_API_KEY |
 | `api.search.brave.com` | Search query (optional) | BRAVE_API_KEY |
 | `api.parallel.ai` | Search query (optional) | PARALLEL_API_KEY |
 | `openrouter.ai` | Search query (optional) | OPENROUTER_API_KEY |
@@ -1124,6 +1121,6 @@ Each API key is transmitted only to its respective endpoint. Your OpenAI key is 
 
 ---
 
-*30 days of research. 30 seconds of work. Seven sources. Zero stale prompts.*
+*30 days of research. 30 seconds of work. Eight sources. Zero stale prompts.*
 
-*Pair with [Open Claw](https://github.com/openclaw/openclaw) for automated watchlists and briefings. Reddit. X. YouTube. TikTok. Web.  - All synthesized into expert answers and copy-paste prompts.*
+*Pair with [Open Claw](https://github.com/openclaw/openclaw) for automated watchlists and briefings. Reddit. X. YouTube. TikTok. Instagram. Web. — All synthesized into expert answers and copy-paste prompts.*

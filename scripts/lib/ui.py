@@ -77,6 +77,12 @@ TIKTOK_MESSAGES = [
     "Scanning TikTok for relevant content...",
 ]
 
+INSTAGRAM_MESSAGES = [
+    "Searching Instagram Reels...",
+    "Finding what's trending on Instagram...",
+    "Scanning Instagram for relevant reels...",
+]
+
 HN_MESSAGES = [
     "Searching Hacker News...",
     "Scanning HN front page stories...",
@@ -286,6 +292,15 @@ class ProgressDisplay:
         if self.spinner:
             self.spinner.stop(f"{Colors.PURPLE}TikTok{Colors.RESET} Found {count} videos")
 
+    def start_instagram(self):
+        msg = random.choice(INSTAGRAM_MESSAGES)
+        self.spinner = Spinner(f"{Colors.PURPLE}Instagram{Colors.RESET} {msg}", Colors.PURPLE)
+        self.spinner.start()
+
+    def end_instagram(self, count: int):
+        if self.spinner:
+            self.spinner.stop(f"{Colors.PURPLE}Instagram{Colors.RESET} Found {count} reels")
+
     def start_hackernews(self):
         msg = random.choice(HN_MESSAGES)
         self.spinner = Spinner(f"{Colors.YELLOW}HN{Colors.RESET} {msg}", Colors.YELLOW, quiet=True)
@@ -313,7 +328,7 @@ class ProgressDisplay:
         if self.spinner:
             self.spinner.stop()
 
-    def show_complete(self, reddit_count: int, x_count: int, youtube_count: int = 0, hn_count: int = 0, pm_count: int = 0, tiktok_count: int = 0):
+    def show_complete(self, reddit_count: int, x_count: int, youtube_count: int = 0, hn_count: int = 0, pm_count: int = 0, tiktok_count: int = 0, ig_count: int = 0):
         elapsed = time.time() - self.start_time
         if IS_TTY:
             sys.stderr.write(f"\n{Colors.GREEN}{Colors.BOLD}✓ Research complete{Colors.RESET} ")
@@ -324,6 +339,8 @@ class ProgressDisplay:
                 sys.stderr.write(f"  {Colors.RED}YouTube:{Colors.RESET} {youtube_count} videos")
             if tiktok_count:
                 sys.stderr.write(f"  {Colors.PURPLE}TikTok:{Colors.RESET} {tiktok_count} videos")
+            if ig_count:
+                sys.stderr.write(f"  {Colors.PURPLE}Instagram:{Colors.RESET} {ig_count} reels")
             if hn_count:
                 sys.stderr.write(f"  {Colors.YELLOW}HN:{Colors.RESET} {hn_count} stories")
             if pm_count:
@@ -335,6 +352,8 @@ class ProgressDisplay:
                 parts.append(f"YouTube: {youtube_count} videos")
             if tiktok_count:
                 parts.append(f"TikTok: {tiktok_count} videos")
+            if ig_count:
+                parts.append(f"Instagram: {ig_count} reels")
             if hn_count:
                 parts.append(f"HN: {hn_count} stories")
             if pm_count:
