@@ -199,6 +199,7 @@ def get_config() -> Dict[str, Any]:
         ('OPENROUTER_API_KEY', None),
         ('PARALLEL_API_KEY', None),
         ('BRAVE_API_KEY', None),
+        ('XIAOHONGSHU_API_BASE', None),
         ('OPENAI_MODEL_POLICY', 'auto'),
         ('OPENAI_MODEL_PIN', None),
         ('XAI_MODEL_POLICY', 'latest'),
@@ -221,24 +222,20 @@ def config_exists() -> bool:
 
 
 def get_available_sources(config: Dict[str, Any]) -> str:
-    """Determine which sources are available based on API keys.
+    """Determine which sources are available.
 
     Returns: 'all', 'both', 'reddit', 'reddit-web', 'x', 'x-web', 'web', or 'none'
     """
-    has_openai = bool(config.get('OPENAI_API_KEY')) and config.get('OPENAI_AUTH_STATUS') == AUTH_STATUS_OK
+    # Reddit is available via public JSON fallback even without OpenAI auth.
+    has_reddit = True
     has_xai = bool(config.get('XAI_API_KEY'))
     has_web = has_web_search_keys(config)
 
-    if has_openai and has_xai:
+    if has_reddit and has_xai:
         return 'all' if has_web else 'both'
-    elif has_openai:
+    elif has_reddit:
         return 'reddit-web' if has_web else 'reddit'
-    elif has_xai:
-        return 'x-web' if has_web else 'x'
-    elif has_web:
-        return 'web'
-    else:
-        return 'web'  # Fallback: assistant WebSearch (no API keys needed)
+    return 'web' if has_web else 'none'
 
 
 def has_web_search_keys(config: Dict[str, Any]) -> bool:
@@ -267,7 +264,7 @@ def get_missing_keys(config: Dict[str, Any]) -> str:
 
     Returns: 'all', 'both', 'reddit', 'x', 'web', or 'none'
     """
-    has_openai = bool(config.get('OPENAI_API_KEY')) and config.get('OPENAI_AUTH_STATUS') == AUTH_STATUS_OK
+    has_reddit = True
     has_xai = bool(config.get('XAI_API_KEY'))
     has_web = has_web_search_keys(config)
 
@@ -277,16 +274,15 @@ def get_missing_keys(config: Dict[str, Any]) -> str:
 
     has_x = has_xai or has_bird
 
-    if has_openai and has_x and has_web:
+    if has_reddit and has_x and has_web:
         return 'none'
-    elif has_openai and has_x:
+    elif has_reddit and has_x:
         return 'web'  # Missing web search keys
-    elif has_openai:
+    elif has_reddit and has_web:
+        return 'x'  # Missing X source
+    elif has_reddit:
         return 'x'  # Missing X source (and possibly web)
-    elif has_x:
-        return 'reddit'  # Missing OpenAI key (and possibly web)
-    else:
-        return 'all'  # Missing everything
+    return 'all'
 
 
 def validate_sources(requested: str, available: str, include_web: bool = False) -> tuple[str, Optional[str]]:
@@ -300,56 +296,51 @@ def validate_sources(requested: str, available: str, include_web: bool = False) 
     Returns:
         Tuple of (effective_sources, error_message)
     """
-    # No API keys at all
-    if available == 'none':
-        if requested == 'auto':
-            return 'web', "No API keys configured. The assistant can still search the web if it has a search tool."
-        elif requested == 'web':
-            return 'web', None
-        else:
-            return 'web', f"No API keys configured. Add keys to ~/.config/last30days/.env for Reddit/X."
-
-    # Web-only mode (only web search API keys)
-    if available == 'web':
-        if requested == 'auto':
-            return 'web', None
-        elif requested == 'web':
-            return 'web', None
-        else:
-            return 'web', "Only web search keys configured. Add OPENAI_API_KEY (or run codex login) for Reddit, XAI_API_KEY for X."
+    has_reddit = available in ('reddit', 'both', 'reddit-web', 'all')
+    has_x = available in ('x', 'both', 'x-web', 'all')
+    has_web = available in ('web', 'reddit-web', 'x-web', 'all')
 
     if requested == 'auto':
-        # Add web to sources if include_web is set
+        if has_reddit and has_x:
+            base = 'both'
+        elif has_reddit:
+            base = 'reddit'
+        elif has_x:
+            base = 'x'
+        elif has_web:
+            base = 'web'
+        else:
+            return 'none', "No sources are available."
+
         if include_web:
-            if available == 'both':
-                return 'all', None  # reddit + x + web
-            elif available == 'reddit':
+            if base == 'both':
+                return 'all', None
+            if base == 'reddit':
                 return 'reddit-web', None
-            elif available == 'x':
+            if base == 'x':
                 return 'x-web', None
-        return available, None
+        return base, None
 
     if requested == 'web':
         return 'web', None
 
     if requested == 'both':
-        if available not in ('both',):
-            missing = 'xAI' if available == 'reddit' else 'OpenAI'
-            return 'none', f"Requested both sources but {missing} key is missing. Use --sources=auto to use available keys."
+        if not (has_reddit and has_x):
+            return 'none', "Requested both sources but X source is missing."
         if include_web:
             return 'all', None
         return 'both', None
 
     if requested == 'reddit':
-        if available == 'x':
+        if not has_reddit:
             return 'none', "Requested Reddit but only xAI key is available."
         if include_web:
             return 'reddit-web', None
         return 'reddit', None
 
     if requested == 'x':
-        if available == 'reddit':
-            return 'none', "Requested X but only OpenAI key is available."
+        if not has_x:
+            return 'none', "Requested X but no X source is available (need Bird auth or XAI_API_KEY)."
         if include_web:
             return 'x-web', None
         return 'x', None
@@ -433,6 +424,40 @@ def is_instagram_available(config: Dict[str, Any]) -> bool:
 def get_instagram_token(config: Dict[str, Any]) -> str:
     """Get Instagram API token (same ScrapeCreators key as TikTok)."""
     return config.get('SCRAPECREATORS_API_KEY') or ''
+
+
+def get_xiaohongshu_api_base(config: Dict[str, Any]) -> str:
+    """Get Xiaohongshu HTTP API base URL.
+
+    Defaults to host.docker.internal so OpenClaw Docker can reach host service.
+    """
+    return (config.get('XIAOHONGSHU_API_BASE') or "http://host.docker.internal:18060").rstrip("/")
+
+
+def is_xiaohongshu_available(config: Dict[str, Any]) -> bool:
+    """Check whether Xiaohongshu HTTP API is reachable and logged in."""
+    # Import here to avoid heavy imports at module load.
+    from . import http
+
+    base = get_xiaohongshu_api_base(config)
+    try:
+        # Keep health probe snappy, but allow one retry for transient hiccups.
+        health = http.get(f"{base}/health", timeout=3, retries=2)
+        if not isinstance(health, dict):
+            return False
+        if not health.get("success"):
+            return False
+
+        # Login probe can be slower on some deployments (browser/session checks),
+        # so use a slightly longer timeout to avoid false negatives.
+        login = http.get(f"{base}/api/v1/login/status", timeout=8, retries=2)
+        is_logged_in = (
+            login.get("data", {}).get("is_logged_in")
+            if isinstance(login, dict) else False
+        )
+        return bool(is_logged_in)
+    except Exception:
+        return False
 
 
 # Backward compat alias

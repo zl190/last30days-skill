@@ -502,6 +502,20 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
         lines.append(f"  ✅ Instagram: {len(report.instagram)} reels ({with_captions} with captions)")
     # Hide when zero results
 
+    # Xiaohongshu (from Web source bucket)
+    xhs_count = 0
+    if report.web:
+        xhs_count = sum(
+            1 for w in report.web
+            if getattr(w, "source_domain", "").lower().endswith("xiaohongshu.com")
+        )
+    if xhs_count > 0:
+        lines.append(f"  ✅ Xiaohongshu: {xhs_count} notes")
+    else:
+        reason = source_info.get("xiaohongshu_skip_reason")
+        if reason:
+            lines.append(f"  ⚡ Xiaohongshu: {reason}")
+
     # Hacker News
     if report.hackernews_error:
         lines.append(f"  ❌ HN: error - {report.hackernews_error}")
