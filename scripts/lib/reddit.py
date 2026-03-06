@@ -65,7 +65,7 @@ NOISE_WORDS = frozenset({
 
 def _log(msg: str):
     """Log to stderr."""
-    sys.stderr.write(f"[Reddit/SC] {msg}\n")
+    sys.stderr.write(f"[Reddit] {msg}\n")
     sys.stderr.flush()
 
 
