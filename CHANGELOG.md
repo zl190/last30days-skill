@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.1] - 2026-03-05
+
+### Highlights
+
+Auto-save research briefings to `~/Documents/Last30Days/` as topic-named .md files. Every run now builds a personal research library automatically - no more manual copy-paste.
+
+### Added
+
+- Auto-save complete research briefings (synthesis, stats, follow-up suggestions) to `~/Documents/Last30Days/{topic-slug}.md` after every run
+- Kebab-case filename generation from topic (e.g., "Claude Code skills" -> `claude-code-skills.md`)
+- Duplicate topic handling: appends date suffix instead of overwriting (e.g., `claude-code-skills-2026-03-05.md`)
+- Agent mode (`--agent`) also saves research files
+- Brief confirmation after save: "Saved to ~/Documents/Last30Days/{slug}.md"
+
+### Credits
+
+- [@devin_explores](https://x.com/devin_explores) -- Inspired this feature by sharing their workflow of saving every last30days run into organized .md files ([PR #51](https://github.com/mvanhorn/last30days-skill/pull/51))
+
 ## [2.9.0] - 2026-03-05
 
 ### Highlights
@@ -114,6 +132,7 @@ Three headline features: watchlists for always-on bots, YouTube transcripts as a
 
 Initial public release. Reddit + X search via OpenAI Responses API and xAI API.
 
+[2.9.1]: https://github.com/mvanhorn/last30days-skill/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/mvanhorn/last30days-skill/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/mvanhorn/last30days-skill/compare/v2.6.0...v2.8.0
 [2.1.0]: https://github.com/mvanhorn/last30days-skill/compare/v1.0.0...v2.1.0

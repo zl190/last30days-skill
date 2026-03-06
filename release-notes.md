@@ -2,15 +2,19 @@ The AI world reinvents itself every month. This skill keeps you current.
 
 `/last30days` researches your topic across **Reddit, X, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web** from the last 30 days, finds what the community is actually upvoting, sharing, betting on, and saying on camera, and writes you a grounded narrative with real citations.
 
+## What's New in v2.9.1
+
+**Auto-save to ~/Documents/Last30Days/.** Every run now saves the complete research briefing - synthesis, stats, and follow-up suggestions - as a topic-named `.md` file to your Documents folder. Build a personal research library without lifting a finger. Inspired by [@devin_explores](https://x.com/devin_explores) who was already doing this manually.
+
 ## Three Headline Features in v2.9
 
-**1. ScrapeCreators Reddit as default.** One `SCRAPECREATORS_API_KEY` now covers Reddit, TikTok, and Instagram — three sources, one key. No more `OPENAI_API_KEY` required for Reddit search. Faster, more reliable, and simpler to configure.
+**1. ScrapeCreators Reddit as default.** One `SCRAPECREATORS_API_KEY` now covers Reddit, TikTok, and Instagram - three sources, one key. No more `OPENAI_API_KEY` required for Reddit search. Faster, more reliable, and simpler to configure.
 
-**2. Smart subreddit discovery.** Relevance-weighted scoring replaces pure frequency count. Each candidate subreddit is scored by `frequency × recency × topic-word match`, and a `UTILITY_SUBS` blocklist filters noise subs like r/tipofmytongue. Search "Claude Code skills" and get r/ClaudeAI, r/ClaudeCode, r/openclaw — not generic programming subs.
+**2. Smart subreddit discovery.** Relevance-weighted scoring replaces pure frequency count. Each candidate subreddit is scored by `frequency x recency x topic-word match`, and a `UTILITY_SUBS` blocklist filters noise subs like r/tipofmytongue. Search "Claude Code skills" and get r/ClaudeAI, r/ClaudeCode, r/openclaw - not generic programming subs.
 
-**3. Top comments elevated.** The best comment on each Reddit thread now carries a 10% weight in engagement scoring and displays prominently with `💬` and upvote counts. Reddit's value is in the comments — now the skill surfaces them.
+**3. Top comments elevated.** The best comment on each Reddit thread now carries a 10% weight in engagement scoring and displays prominently with upvote counts. Reddit's value is in the comments - now the skill surfaces them.
 
-Plus: **Instagram Reels** (v2.8), **Polymarket prediction markets** (v2.5), **YouTube transcripts** (v2.1), **bundled X search** — no external CLI needed.
+Plus: **Instagram Reels** (v2.8), **Polymarket prediction markets** (v2.5), **YouTube transcripts** (v2.1), **bundled X search** - no external CLI needed.
 
 ## Beta Test Results (v2.9)
 
