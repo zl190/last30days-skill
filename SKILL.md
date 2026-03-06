@@ -11,11 +11,11 @@ metadata:
     emoji: "📰"
     requires:
       env:
-        - OPENAI_API_KEY
+        - SCRAPECREATORS_API_KEY
       bins:
         - node
         - python3
-    primaryEnv: OPENAI_API_KEY
+    primaryEnv: SCRAPECREATORS_API_KEY
     files:
       - "scripts/*"
     homepage: https://github.com/mvanhorn/last30days-skill
@@ -239,9 +239,10 @@ The Judge Agent must:
 2. Weight YouTube sources HIGH (they have views, likes, and transcript content)
 3. Weight TikTok sources HIGH (they have views, likes, and caption content — viral signal)
 4. Weight WebSearch sources LOWER (no engagement data)
-4. Identify patterns that appear across ALL sources (strongest signals)
-5. Note any contradictions between sources
-6. Extract the top 3-5 actionable insights
+5. **For Reddit: Pay special attention to top comments** — they often contain the wittiest, most insightful, or funniest take. When a top comment has high upvotes (shown as `💬 Top comment (N upvotes)`), quote it directly in your synthesis. Reddit's value is in the comments.
+6. Identify patterns that appear across ALL sources (strongest signals)
+7. Note any contradictions between sources
+8. Extract the top 3-5 actionable insights
 
 7. **Cross-platform signals are the strongest evidence.** When items have `[also on: Reddit, HN]` or similar tags, it means the same story appears across multiple platforms. Lead with these cross-platform findings - they're the most important signals in the research.
 
@@ -345,7 +346,7 @@ CITATION RULE: Cite sources sparingly to prove research is real.
 
 CITATION PRIORITY (most to least preferred):
 1. @handles from X — "per @handle" (these prove the tool's unique value)
-2. r/subreddits from Reddit — "per r/subreddit"
+2. r/subreddits from Reddit — "per r/subreddit" (when citing Reddit, prefer quoting top comments over just the thread title)
 3. YouTube channels — "per [channel name] on YouTube" (transcript-backed insights)
 4. TikTok creators — "per @creator on TikTok" (viral/trending signal)
 5. Instagram creators — "per @creator on Instagram" (influencer/creator signal)
@@ -596,12 +597,13 @@ Want another prompt? Just tell me what you're creating next.
 ## Security & Permissions
 
 **What this skill does:**
-- Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery
+- Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for Reddit search, subreddit discovery, and comment enrichment (requires SCRAPECREATORS_API_KEY — same key as TikTok + Instagram)
+- Legacy: Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery (fallback if no SCRAPECREATORS_API_KEY)
 - Sends search queries to Twitter's GraphQL API (via browser cookie auth) or xAI's API (`api.x.ai`) for X search
 - Sends search queries to Algolia HN Search API (`hn.algolia.com`) for Hacker News story and comment discovery (free, no auth)
 - Sends search queries to Polymarket Gamma API (`gamma-api.polymarket.com`) for prediction market discovery (free, no auth)
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
-- Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for TikTok and Instagram search, transcript/caption extraction (requires SCRAPECREATORS_API_KEY, PAYG after 100 free credits)
+- Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for TikTok and Instagram search, transcript/caption extraction (same SCRAPECREATORS_API_KEY as Reddit, PAYG after 100 free credits)
 - Optionally sends search queries to Brave Search API, Parallel AI API, or OpenRouter API for web search
 - Fetches public Reddit thread data from `reddit.com` for engagement metrics
 - Stores research findings in local SQLite database (watchlist mode only)

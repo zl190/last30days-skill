@@ -130,23 +130,62 @@ def expand_reddit_queries(topic: str, depth: str) -> List[str]:
     return queries
 
 
-def discover_subreddits(results: List[Dict[str, Any]], max_subs: int = 5) -> List[str]:
-    """Extract top subreddits from global search results by frequency.
+# Known utility/meta subreddits that match queries but aren't discussion subs.
+# These get a 0.3x penalty (not banned) in subreddit discovery scoring.
+UTILITY_SUBS = frozenset({
+    'namethatsong', 'findthatsong', 'tipofmytongue',
+    'whatisthissong', 'helpmefind', 'whatisthisthing',
+    'whatsthissong', 'findareddit', 'subredditdrama',
+})
+
+
+def discover_subreddits(
+    results: List[Dict[str, Any]],
+    topic: str = "",
+    max_subs: int = 5,
+) -> List[str]:
+    """Extract top subreddits from global search results with relevance weighting.
+
+    Uses frequency + topic-word matching + utility-sub penalties + engagement
+    bonus to find discussion subs rather than utility/meta subs.
 
     Args:
         results: List of post dicts from global search
+        topic: Original search topic (for relevance matching)
         max_subs: Maximum subreddits to return
 
     Returns:
-        Top subreddit names sorted by post count
+        Top subreddit names sorted by weighted score
     """
-    counts = Counter()
+    core = _extract_core_subject(topic) if topic else ""
+    core_words = set(core.lower().split()) if core else set()
+
+    scores = Counter()
     for post in results:
         sub = post.get("subreddit", "")
-        if sub:
-            counts[sub] += 1
+        if not sub:
+            continue
 
-    return [sub for sub, _ in counts.most_common(max_subs)]
+        # Base: frequency count
+        base = 1.0
+
+        # Bonus: subreddit name contains a core topic word
+        sub_lower = sub.lower()
+        if core_words and any(w in sub_lower for w in core_words if len(w) > 2):
+            base += 2.0
+
+        # Penalty: known utility/meta subreddits
+        if sub_lower in UTILITY_SUBS:
+            base *= 0.3
+
+        # Bonus: post engagement (high-engagement posts = better sub)
+        ups = post.get("ups") or post.get("score", 0)
+        if ups and ups > 100:
+            base += 0.5
+
+        scores[sub] += base
+
+    return [sub for sub, _ in scores.most_common(max_subs)]
 
 
 def _parse_date(created_utc) -> Optional[str]:
@@ -399,7 +438,7 @@ def search_reddit(
         all_items.append(item)
 
     # === Phase 3: Subreddit Discovery + Targeted Search ===
-    discovered_subs = discover_subreddits(all_raw_posts, max_subs=config["subreddit_searches"])
+    discovered_subs = discover_subreddits(all_raw_posts, topic=topic, max_subs=config["subreddit_searches"])
     _log(f"Discovered subreddits: {discovered_subs}")
 
     core = _extract_core_subject(topic)
@@ -484,7 +523,7 @@ def enrich_with_comments(
         top_comments = []
         insights = []
 
-        for c in raw_comments[:10]:  # Take top 10 comments
+        for ci, c in enumerate(raw_comments[:10]):  # Take top 10 comments
             body = c.get("body", "")
             if not body or body in ("[deleted]", "[removed]"):
                 continue
@@ -494,11 +533,13 @@ def enrich_with_comments(
             permalink = c.get("permalink", "")
             comment_url = f"https://reddit.com{permalink}" if permalink else ""
 
+            # Top comment gets more room (400 chars) — funny/clever comments need it
+            max_excerpt = 400 if ci == 0 else 300
             top_comments.append({
                 "score": score,
                 "date": _parse_date(c.get("created_utc")),
                 "author": author,
-                "excerpt": body[:300],
+                "excerpt": body[:max_excerpt],
                 "url": comment_url,
             })
 
@@ -518,7 +559,7 @@ def enrich_with_comments(
         top_comments.sort(key=lambda c: c.get("score", 0), reverse=True)
 
         item["top_comments"] = top_comments[:10]
-        item["comment_insights"] = insights[:7]
+        item["comment_insights"] = insights[:10]
 
     return items
 
