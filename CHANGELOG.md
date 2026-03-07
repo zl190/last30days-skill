@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.4] - 2026-03-06
+
+### Changed
+
+- Move save into Python script via `--save-dir` flag - raw research data saved during the existing script Bash call, zero extra tool calls after invitation
+- Remove entire "Save Research to Documents" section from SKILL.md (~45 lines removed)
+- No more `📎` footer, no Bash heredoc, no `(No output)`, no multi-minute cogitation after research
+
 ## [2.9.3] - 2026-03-06
 
 ### Fixed

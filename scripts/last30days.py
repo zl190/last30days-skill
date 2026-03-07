@@ -1250,6 +1250,13 @@ def main():
         default=False,
         help="Skip native web search backends (Parallel/Brave/OpenRouter). Use when the assistant has its own WebSearch tool.",
     )
+    parser.add_argument(
+        "--save-dir",
+        type=str,
+        default=None,
+        metavar="DIR",
+        help="Auto-save raw research output to DIR/{topic-slug}.md",
+    )
 
     args = parser.parse_args()
     args.topic = " ".join(args.topic) if args.topic else None
@@ -1603,6 +1610,20 @@ def main():
 
     # Output result
     output_result(report, args.emit, web_needed, args.topic, from_date, to_date, missing_keys, args.days, source_info)
+
+    # Auto-save raw research to file if --save-dir is set
+    if args.save_dir:
+        import re
+        save_dir = Path(args.save_dir).expanduser()
+        save_dir.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r'[^a-z0-9]+', '-', args.topic.lower()).strip('-')[:60]
+        save_path = save_dir / f"{slug}.md"
+        if save_path.exists():
+            save_path = save_dir / f"{slug}-{datetime.now().strftime('%Y-%m-%d')}.md"
+        content = render.render_compact(report, missing_keys=missing_keys)
+        content += "\n" + render.render_source_status(report, source_info)
+        save_path.write_text(content, encoding="utf-8")
+        print(f"📎 {save_path}", file=sys.stderr)
 
     # Persist findings to SQLite if requested
     if args.store:
