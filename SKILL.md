@@ -5,13 +5,25 @@ description: "Research a topic from the last 30 days. Also triggered by 'last30'
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
 homepage: https://github.com/mvanhorn/last30days-skill
+repository: https://github.com/mvanhorn/last30days-skill
+author: mvanhorn
+license: MIT
 user-invocable: true
 metadata:
-  clawdbot:
+  openclaw:
     emoji: "📰"
     requires:
       env:
         - SCRAPECREATORS_API_KEY
+      optionalEnv:
+        - OPENAI_API_KEY
+        - XAI_API_KEY
+        - OPENROUTER_API_KEY
+        - PARALLEL_API_KEY
+        - BRAVE_API_KEY
+        - APIFY_API_TOKEN
+        - AUTH_TOKEN
+        - CT0
       bins:
         - node
         - python3
@@ -25,12 +37,16 @@ metadata:
       - x
       - youtube
       - tiktok
+      - instagram
       - hackernews
+      - polymarket
       - trends
       - prompts
 ---
 
 # last30days v2.9.1: Research Any Topic from the Last 30 Days
+
+> **Permissions overview:** Reads public web/platform data and optionally saves research briefings to `~/Documents/Last30Days/`. X/Twitter search uses optional user-provided tokens (AUTH_TOKEN/CT0 env vars) — no browser session access. All credential usage and data writes are documented in the [Security & Permissions](#security--permissions) section.
 
 Research ANY topic across Reddit, X, YouTube, TikTok, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 
@@ -618,7 +634,7 @@ For the rest of this conversation, remember:
 - **KEY PATTERNS**: {list the top 3-5 patterns you learned}
 - **RESEARCH FINDINGS**: The key facts and insights from the research
 
-**CRITICAL: After research is complete, you are now an EXPERT on this topic.**
+**CRITICAL: After research is complete, treat yourself as an EXPERT on this topic.**
 
 When the user asks follow-up questions:
 - **DO NOT run new WebSearches** - you already have the research
@@ -649,7 +665,7 @@ Want another prompt? Just tell me what you're creating next.
 **What this skill does:**
 - Sends search queries to ScrapeCreators API (`api.scrapecreators.com`) for Reddit search, subreddit discovery, and comment enrichment (requires SCRAPECREATORS_API_KEY — same key as TikTok + Instagram)
 - Legacy: Sends search queries to OpenAI's Responses API (`api.openai.com`) for Reddit discovery (fallback if no SCRAPECREATORS_API_KEY)
-- Sends search queries to Twitter's GraphQL API (via browser cookie auth) or xAI's API (`api.x.ai`) for X search
+- Sends search queries to Twitter's GraphQL API (via optional user-provided AUTH_TOKEN/CT0 env vars — no browser session access) or xAI's API (`api.x.ai`) for X search
 - Sends search queries to Algolia HN Search API (`hn.algolia.com`) for Hacker News story and comment discovery (free, no auth)
 - Sends search queries to Polymarket Gamma API (`gamma-api.polymarket.com`) for prediction market discovery (free, no auth)
 - Runs `yt-dlp` locally for YouTube search and transcript extraction (no API key, public data)
