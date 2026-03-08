@@ -426,12 +426,15 @@ def show_diagnostic_banner(diag: dict):
             bird_username, youtube, web_search_backend
     """
     has_openai = diag.get("openai", False)
+    has_reddit_public = diag.get("reddit_public", False)
+    has_reddit = has_openai or has_reddit_public
     has_x = diag.get("x_source") is not None
     has_youtube = diag.get("youtube", False)
+    has_xiaohongshu = diag.get("xiaohongshu", False)
     has_web = diag.get("web_search_backend") is not None
 
     # If everything is available, no banner needed
-    if has_openai and has_x and has_youtube and has_web:
+    if has_reddit and has_x and has_youtube and has_web:
         return
 
     lines = []
@@ -443,7 +446,9 @@ def show_diagnostic_banner(diag: dict):
 
         # Reddit
         if has_openai:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Reddit{Colors.RESET}    — OPENAI_API_KEY found                {Colors.DIM}│{Colors.RESET}")
+            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Reddit{Colors.RESET}    — OpenAI/Codex auth found             {Colors.DIM}│{Colors.RESET}")
+        elif has_reddit_public:
+            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Reddit{Colors.RESET}    — Public Reddit search (no key)       {Colors.DIM}│{Colors.RESET}")
         else:
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ Reddit{Colors.RESET}    — No OPENAI_API_KEY                    {Colors.DIM}│{Colors.RESET}")
             lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last30days/.env            {Colors.DIM}│{Colors.RESET}")
@@ -469,6 +474,12 @@ def show_diagnostic_banner(diag: dict):
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ YouTube{Colors.RESET}   — yt-dlp not installed                {Colors.DIM}│{Colors.RESET}")
             lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Fix: brew install yt-dlp (free)                {Colors.DIM}│{Colors.RESET}")
 
+        # Xiaohongshu
+        if has_xiaohongshu:
+            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Xiaohongshu{Colors.RESET} — API connected + logged in         {Colors.DIM}│{Colors.RESET}")
+        else:
+            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.YELLOW}⚡ Xiaohongshu{Colors.RESET} — API not connected/logged in      {Colors.DIM}│{Colors.RESET}")
+
         # Web
         if has_web:
             backend = diag.get("web_search_backend", "")
@@ -486,7 +497,9 @@ def show_diagnostic_banner(diag: dict):
         lines.append("│                                                     │")
 
         if has_openai:
-            lines.append("│  ✅ Reddit    — OPENAI_API_KEY found                │")
+            lines.append("│  ✅ Reddit    — OpenAI/Codex auth found             │")
+        elif has_reddit_public:
+            lines.append("│  ✅ Reddit    — Public Reddit search (no key)       │")
         else:
             lines.append("│  ❌ Reddit    — No OPENAI_API_KEY                    │")
             lines.append("│     └─ Add to ~/.config/last30days/.env            │")
@@ -505,6 +518,11 @@ def show_diagnostic_banner(diag: dict):
         else:
             lines.append("│  ❌ YouTube   — yt-dlp not installed                │")
             lines.append("│     └─ Fix: brew install yt-dlp (free)                │")
+
+        if has_xiaohongshu:
+            lines.append("│  ✅ Xiaohongshu — API connected + logged in         │")
+        else:
+            lines.append("│  ⚡ Xiaohongshu — API not connected/logged in       │")
 
         if has_web:
             lines.append("│  ✅ Web       — API search available                │")

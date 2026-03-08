@@ -355,6 +355,105 @@ def search_reddit(
     raise http.HTTPError("No models available")
 
 
+def _public_relevance(score: int, num_comments: int) -> float:
+    """Estimate relevance for public Reddit search results."""
+    # Lightweight heuristic: blend normalized score + comments.
+    score_component = min(1.0, max(0.0, score / 500.0))
+    comments_component = min(1.0, max(0.0, num_comments / 200.0))
+    return round((score_component * 0.6) + (comments_component * 0.4), 3)
+
+
+def search_reddit_public(
+    topic: str,
+    from_date: str,
+    to_date: str,
+    depth: str = "default",
+) -> List[Dict[str, Any]]:
+    """Search Reddit directly via public JSON endpoint (no OpenAI key required).
+
+    This is a fallback mode for environments where OpenAI auth is unavailable.
+    It uses reddit.com/search/.json with recency filter (t=month).
+    """
+    _, max_items = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
+    limit = min(100, max(20, max_items))
+
+    core = _extract_core_subject(topic)
+    queries = [topic]
+    if core and core.lower() != topic.lower():
+        queries.append(core)
+        queries.append(f'"{core}"')
+
+    seen_urls = set()
+    all_items: List[Dict[str, Any]] = []
+
+    headers = {
+        "User-Agent": http.USER_AGENT,
+        "Accept": "application/json",
+    }
+
+    for query in queries:
+        try:
+            url = (
+                "https://www.reddit.com/search/.json"
+                f"?q={_url_encode(query)}&sort=new&t=month&limit={limit}&raw_json=1"
+            )
+            data = http.get(url, headers=headers, timeout=20, retries=2)
+            children = data.get("data", {}).get("children", [])
+            for child in children:
+                if child.get("kind") != "t3":
+                    continue
+                post = child.get("data", {})
+                permalink = str(post.get("permalink", "")).strip()
+                if not permalink or "/comments/" not in permalink:
+                    continue
+
+                full_url = f"https://www.reddit.com{permalink}"
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+
+                score = int(post.get("score", 0) or 0)
+                num_comments = int(post.get("num_comments", 0) or 0)
+
+                # Parse date from created_utc
+                created_utc = post.get("created_utc")
+                date_value = None
+                if created_utc:
+                    from . import dates as dates_mod
+                    date_value = dates_mod.timestamp_to_date(created_utc)
+
+                all_items.append({
+                    "id": f"R{len(all_items)+1}",
+                    "title": str(post.get("title", "")).strip(),
+                    "url": full_url,
+                    "subreddit": str(post.get("subreddit", "")).strip(),
+                    "date": date_value,
+                    "why_relevant": "Found via Reddit public search",
+                    "relevance": _public_relevance(score, num_comments),
+                    "engagement": {
+                        "score": score,
+                        "num_comments": num_comments,
+                        "upvote_ratio": post.get("upvote_ratio"),
+                    },
+                })
+
+        except http.HTTPError as e:
+            _log_info(f"Public Reddit search failed for query '{query}': {e}")
+            # Continue with next query; partial results are still useful.
+            continue
+        except Exception as e:
+            _log_info(f"Public Reddit search error for query '{query}': {e}")
+            continue
+
+    # Sort by date (desc, unknown dates last), then relevance desc
+    def _sort_key(item: Dict[str, Any]):
+        date_str = item.get("date") or ""
+        return (date_str, float(item.get("relevance", 0.0)))
+
+    all_items.sort(key=_sort_key, reverse=True)
+    return all_items[: max_items * 2]
+
+
 def search_subreddits(
     subreddits: List[str],
     topic: str,

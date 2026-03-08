@@ -8,7 +8,6 @@ echo "Source: $SRC"
 
 TARGETS=(
   "$HOME/.claude/skills/last30days"
-  "$HOME/.claude/skills/last30daysCROSS"
   "$HOME/.agents/skills/last30days"
   "$HOME/.codex/skills/last30days"
 )
@@ -18,18 +17,7 @@ for t in "${TARGETS[@]}"; do
   echo "--- Syncing to $t ---"
   mkdir -p "$t/scripts/lib"
 
-  # SKILL.md — CROSS gets patched frontmatter + skill root, others get verbatim copy
-  if [[ "$t" == *"last30daysCROSS"* ]]; then
-    sed \
-      -e 's/^name: last30days$/name: last30daysCROSS/' \
-      -e 's/^version: "2\.1"/version: "2.2-cross"/' \
-      -e "s|^description: .*|description: \"TEST BUILD with outcome-aware Polymarket scoring + cross-source linking. Research a topic from the last 30 days. Sources: Reddit, X, YouTube, Hacker News, Polymarket, web.\"|" \
-      -e "s/^argument-hint: .*/argument-hint: 'last30daysCROSS AI video tools'/" \
-      -e 's|"\$HOME/.claude/skills/last30days"|"$HOME/.claude/skills/last30daysCROSS" \\\n  "$HOME/.claude/skills/last30days"|' \
-      "$SRC/SKILL.md" > "$t/SKILL.md"
-  else
-    cp "$SRC/SKILL.md" "$t/"
-  fi
+  cp "$SRC/SKILL.md" "$t/"
 
   # Main script + lib modules (rsync handles identical files gracefully)
   rsync -a "$SRC/scripts/last30days.py" "$t/scripts/"

@@ -44,7 +44,10 @@ TIMEOUT_PROFILES = {
 }
 
 # Valid source names for the --search flag
-VALID_SEARCH_SOURCES = {"reddit", "x", "hn", "youtube", "tiktok", "instagram", "polymarket", "web"}
+VALID_SEARCH_SOURCES = {
+    "reddit", "x", "hn", "youtube", "tiktok", "instagram",
+    "polymarket", "web", "xiaohongshu", "xhs",
+}
 
 
 def parse_search_flag(search_str: str) -> set:
@@ -64,6 +67,8 @@ def parse_search_flag(search_str: str) -> set:
         s = s.strip().lower()
         if not s:
             continue
+        if s == "xhs":
+            s = "xiaohongshu"
         if s not in VALID_SEARCH_SOURCES:
             print(
                 f"Error: Unknown search source '{s}'. "
@@ -133,6 +138,7 @@ from lib import (
     dates,
     dedupe,
     hackernews,
+    xiaohongshu_api,
     polymarket,
     entity_extract,
     env,
@@ -208,36 +214,60 @@ def _search_reddit(
             sys.stderr.flush()
             # Fall through to OpenAI if we have that key
             if not config.get("OPENAI_API_KEY"):
-                return [], {"error": str(e)}, reddit_error, used_scrapecreators
+                # No OpenAI either: try public Reddit fallback.
+                try:
+                    reddit_items = openai_reddit.search_reddit_public(
+                        topic, from_date, to_date, depth=depth,
+                    )
+                    raw_response = {"source": "reddit_public", "items": reddit_items}
+                    return reddit_items, raw_response, None, False
+                except Exception as e2:
+                    return [], {"error": str(e)}, reddit_error, used_scrapecreators
             used_scrapecreators = False
             sys.stderr.write("[Reddit] Falling back to OpenAI\n")
             sys.stderr.flush()
 
     # === OpenAI path (fallback) ===
     if not mock:
-        try:
-            raw_response = openai_reddit.search_reddit(
-                config["OPENAI_API_KEY"],
-                selected_models["openai"],
-                topic,
-                from_date,
-                to_date,
-                depth=depth,
-                auth_source=config.get("OPENAI_AUTH_SOURCE", "api_key"),
-                account_id=config.get("OPENAI_CHATGPT_ACCOUNT_ID"),
-            )
-        except http.HTTPError as e:
-            raw_response = {"error": str(e)}
-            reddit_error = f"API error: {e}"
-        except Exception as e:
-            raw_response = {"error": str(e)}
-            reddit_error = f"{type(e).__name__}: {e}"
+        if config.get("OPENAI_API_KEY"):
+            try:
+                raw_response = openai_reddit.search_reddit(
+                    config["OPENAI_API_KEY"],
+                    selected_models["openai"],
+                    topic,
+                    from_date,
+                    to_date,
+                    depth=depth,
+                    auth_source=config.get("OPENAI_AUTH_SOURCE", "api_key"),
+                    account_id=config.get("OPENAI_CHATGPT_ACCOUNT_ID"),
+                )
+            except http.HTTPError as e:
+                raw_response = {"error": str(e)}
+                reddit_error = f"API error: {e}"
+            except Exception as e:
+                raw_response = {"error": str(e)}
+                reddit_error = f"{type(e).__name__}: {e}"
+        else:
+            # No OpenAI auth: direct Reddit public JSON fallback.
+            try:
+                reddit_items = openai_reddit.search_reddit_public(
+                    topic, from_date, to_date, depth=depth,
+                )
+                raw_response = {"source": "reddit_public", "items": reddit_items}
+            except http.HTTPError as e:
+                reddit_items = []
+                raw_response = {"error": str(e), "source": "reddit_public"}
+                reddit_error = f"Reddit public API error: {e}"
+            except Exception as e:
+                reddit_items = []
+                raw_response = {"error": str(e), "source": "reddit_public"}
+                reddit_error = f"Reddit public search error: {type(e).__name__}: {e}"
 
     # Parse response
     reddit_items = openai_reddit.parse_reddit_response(raw_response or {})
 
     # Quick retry with simpler query if few results
-    if len(reddit_items) < 5 and not mock and not reddit_error:
+    if len(reddit_items) < 5 and not mock and not reddit_error and config.get("OPENAI_API_KEY"):
         core = openai_reddit._extract_core_subject(topic)
         if core.lower() != topic.lower():
             try:
@@ -259,7 +289,7 @@ def _search_reddit(
                 pass
 
     # Subreddit-targeted fallback if still < 3 results
-    if len(reddit_items) < 3 and not mock and not reddit_error:
+    if len(reddit_items) < 3 and not mock and not reddit_error and config.get("OPENAI_API_KEY"):
         sub_query = openai_reddit._build_subreddit_query(topic)
         try:
             sub_raw = openai_reddit.search_reddit(
@@ -543,6 +573,48 @@ def _search_web(
     return raw_results, web_error
 
 
+def _search_xiaohongshu(
+    topic: str,
+    config: dict,
+    from_date: str,
+    to_date: str,
+    depth: str,
+) -> tuple:
+    """Search Xiaohongshu via xiaohongshu-mcp HTTP API (runs in thread).
+
+    Returns:
+        Tuple of (xiaohongshu_items, xiaohongshu_error)
+        Items are in web-item dict shape and can be normalized with websearch module.
+    """
+    base_url = env.get_xiaohongshu_api_base(config)
+    try:
+        items = xiaohongshu_api.search_feeds(
+            topic=topic,
+            from_date=from_date,
+            to_date=to_date,
+            base_url=base_url,
+            depth=depth,
+        )
+    except Exception as e:
+        return [], f"{type(e).__name__}: {e}"
+
+    # Ensure all required keys exist for normalize_websearch_items()
+    for i, item in enumerate(items):
+        item.setdefault("id", f"XHS{i+1}")
+        item.setdefault("title", "")
+        item.setdefault("url", "")
+        item.setdefault("source_domain", "xiaohongshu.com")
+        item.setdefault("snippet", "")
+        if item.get("date") and not item.get("date_confidence"):
+            item["date_confidence"] = "med"
+        elif not item.get("date"):
+            item["date_confidence"] = "low"
+        item.setdefault("relevance", 0.5)
+        item.setdefault("why_relevant", "")
+
+    return items, None
+
+
 def _run_supplemental(
     topic: str,
     reddit_items: list,
@@ -727,6 +799,7 @@ def run_research(
     run_youtube: bool = False,
     run_tiktok: bool = False,
     run_instagram: bool = False,
+    run_xiaohongshu: bool = False,
     timeouts: dict = None,
     resolved_handle: str = None,
     do_hackernews: bool = True,
@@ -769,6 +842,7 @@ def run_research(
     hackernews_error = None
     polymarket_error = None
     web_error = None
+    xiaohongshu_error = None
 
     # Determine web search mode
     do_web = sources in ("all", "web", "reddit-web", "x-web")
@@ -796,6 +870,19 @@ def run_research(
             if progress:
                 progress.start_web_only()
                 progress.end_web_only()
+        # Optional Xiaohongshu search in web-only mode.
+        if run_xiaohongshu:
+            try:
+                xhs_items, xiaohongshu_error = _search_xiaohongshu(
+                    topic, config, from_date, to_date, depth,
+                )
+                web_items.extend(xhs_items)
+                if xiaohongshu_error and progress:
+                    progress.show_error(f"Xiaohongshu error: {xiaohongshu_error}")
+            except Exception as e:
+                xiaohongshu_error = f"{type(e).__name__}: {e}"
+                if progress:
+                    progress.show_error(f"Xiaohongshu error: {e}")
         # Still run YouTube/TikTok/Instagram in web-only mode if available
         if run_youtube:
             if progress:
@@ -851,10 +938,20 @@ def run_research(
     youtube_future = None
     tiktok_future = None
     instagram_future = None
+    xiaohongshu_future = None
     hackernews_future = None
     polymarket_future = None
     web_future = None
-    max_workers = 2 + (1 if run_youtube else 0) + (1 if run_tiktok else 0) + (1 if run_instagram else 0) + (1 if do_hackernews else 0) + (1 if do_polymarket else 0) + (1 if web_backend else 0)
+    max_workers = (
+        2
+        + (1 if run_youtube else 0)
+        + (1 if run_tiktok else 0)
+        + (1 if run_instagram else 0)
+        + (1 if run_xiaohongshu else 0)
+        + (1 if do_hackernews else 0)
+        + (1 if do_polymarket else 0)
+        + (1 if web_backend else 0)
+    )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit searches
@@ -895,6 +992,11 @@ def run_research(
             instagram_future = executor.submit(
                 _search_instagram, topic, from_date, to_date, depth,
                 env.get_instagram_token(config),
+            )
+
+        if run_xiaohongshu:
+            xiaohongshu_future = executor.submit(
+                _search_xiaohongshu, topic, config, from_date, to_date, depth,
             )
 
         if do_hackernews:
@@ -1003,6 +1105,21 @@ def run_research(
                     progress.show_error(f"Instagram error: {e}")
             if progress:
                 progress.end_instagram(len(instagram_items))
+
+        if xiaohongshu_future:
+            try:
+                xhs_items, xiaohongshu_error = xiaohongshu_future.result(timeout=future_timeout)
+                web_items.extend(xhs_items)
+                if xiaohongshu_error and progress:
+                    progress.show_error(f"Xiaohongshu error: {xiaohongshu_error}")
+            except TimeoutError:
+                xiaohongshu_error = f"Xiaohongshu search timed out after {future_timeout}s"
+                if progress:
+                    progress.show_error(xiaohongshu_error)
+            except Exception as e:
+                xiaohongshu_error = f"{type(e).__name__}: {e}"
+                if progress:
+                    progress.show_error(f"Xiaohongshu error: {e}")
 
         if hackernews_future:
             hn_timeout = timeouts.get("hackernews_future", future_timeout)
@@ -1303,11 +1420,15 @@ def main():
     # Auto-detect ScrapeCreators for Instagram
     has_instagram = env.is_instagram_available(config)
 
+    # Auto-detect Xiaohongshu HTTP API (requires service + login)
+    has_xiaohongshu = env.is_xiaohongshu_available(config)
+
     # --diagnose: show source availability and exit
     if args.diagnose:
         web_source = env.get_web_search_source(config)
         diag = {
             "openai": bool(config.get("OPENAI_API_KEY")),
+            "reddit_public": True,
             "xai": bool(config.get("XAI_API_KEY")),
             "x_source": x_source_status["source"],
             "bird_installed": x_source_status["bird_installed"],
@@ -1316,6 +1437,8 @@ def main():
             "youtube": has_ytdlp,
             "tiktok": has_tiktok,
             "instagram": has_instagram,
+            "xiaohongshu": has_xiaohongshu,
+            "xiaohongshu_api_base": env.get_xiaohongshu_api_base(config),
             "hackernews": True,
             "polymarket": True,
             "web_search_backend": web_source,
@@ -1339,6 +1462,7 @@ def main():
     web_source = env.get_web_search_source(config)
     diag = {
         "openai": bool(config.get("OPENAI_API_KEY")),
+        "reddit_public": True,
         "xai": bool(config.get("XAI_API_KEY")),
         "x_source": x_source_status["source"],
         "bird_installed": x_source_status["bird_installed"],
@@ -1346,6 +1470,8 @@ def main():
         "bird_username": x_source_status.get("bird_username"),
         "youtube": has_ytdlp,
         "tiktok": has_tiktok,
+        "instagram": has_instagram,
+        "xiaohongshu": has_xiaohongshu,
         "hackernews": True,
         "polymarket": True,
         "web_search_backend": "deferred to assistant" if args.no_native_web else web_source,
@@ -1432,6 +1558,7 @@ def main():
     search_run_youtube = has_ytdlp
     search_run_tiktok = has_tiktok
     search_run_instagram = has_instagram
+    search_run_xiaohongshu = has_xiaohongshu
     if args.search:
         search_sources = parse_search_flag(args.search)
         has_reddit = "reddit" in search_sources
@@ -1441,6 +1568,8 @@ def main():
         search_run_youtube = "youtube" in search_sources and has_ytdlp
         search_run_tiktok = "tiktok" in search_sources and has_tiktok
         search_run_instagram = "instagram" in search_sources and has_instagram
+        # If explicitly requested, attempt Xiaohongshu even when preflight says unavailable.
+        search_run_xiaohongshu = "xiaohongshu" in search_sources
         include_search_web = "web" in search_sources
         # Map to existing sources string
         if has_reddit and has_x:
@@ -1468,6 +1597,7 @@ def main():
         run_youtube=search_run_youtube,
         run_tiktok=search_run_tiktok,
         run_instagram=search_run_instagram,
+        run_xiaohongshu=search_run_xiaohongshu,
         timeouts=timeouts,
         resolved_handle=args.x_handle,
         do_hackernews=search_do_hackernews,
@@ -1590,8 +1720,6 @@ def main():
 
     # Build source info for status footer
     source_info = {}
-    if not bool(config.get("OPENAI_API_KEY")):
-        source_info["reddit_skip_reason"] = "No OPENAI_API_KEY (add to ~/.config/last30days/.env)"
     if not x_source:
         if x_source_status["bird_installed"]:
             source_info["x_skip_reason"] = "Bird installed but not authenticated — log into x.com in browser"
@@ -1605,6 +1733,11 @@ def main():
         source_info["tiktok_skip_reason"] = "No SCRAPECREATORS_API_KEY - sign up at scrapecreators.com (100 free credits)"
     if not has_instagram:
         source_info["instagram_skip_reason"] = "No SCRAPECREATORS_API_KEY - sign up at scrapecreators.com (100 free credits)"
+    if not has_xiaohongshu:
+        source_info["xiaohongshu_skip_reason"] = (
+            f"Xiaohongshu API unavailable or not logged in - start xiaohongshu-mcp and login "
+            f"(base: {env.get_xiaohongshu_api_base(config)})"
+        )
     if not web_source:
         source_info["web_skip_reason"] = "assistant will use WebSearch (add BRAVE_API_KEY for native search)"
 
