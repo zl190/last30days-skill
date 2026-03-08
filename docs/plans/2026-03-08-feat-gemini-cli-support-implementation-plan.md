@@ -1,7 +1,7 @@
 ---
 title: "feat: Add Gemini CLI extension support"
 type: feat
-status: active
+status: completed
 date: 2026-03-08
 origin: docs/plans/2026-03-08-review-pr-53-gemini-cli-support-plan.md
 ---
