@@ -257,6 +257,7 @@ def get_config() -> Dict[str, Any]:
         ('CT0', None),
         ('BSKY_HANDLE', None),
         ('BSKY_APP_PASSWORD', None),
+        ('TRUTHSOCIAL_TOKEN', None),
     ]
 
     for key, default in keys:
@@ -488,6 +489,14 @@ def is_bluesky_available(config: Dict[str, Any]) -> bool:
     Requires BSKY_HANDLE and BSKY_APP_PASSWORD (app password from bsky.app/settings).
     """
     return bool(config.get('BSKY_HANDLE') and config.get('BSKY_APP_PASSWORD'))
+
+
+def is_truthsocial_available(config: Dict[str, Any]) -> bool:
+    """Check if Truth Social source is available.
+
+    Requires TRUTHSOCIAL_TOKEN (bearer token from browser dev tools).
+    """
+    return bool(config.get('TRUTHSOCIAL_TOKEN'))
 
 
 def is_polymarket_available() -> bool:

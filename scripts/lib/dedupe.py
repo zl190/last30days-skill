@@ -234,6 +234,14 @@ def dedupe_bluesky(
     return dedupe_items(items, threshold)
 
 
+def dedupe_truthsocial(
+    items: List[schema.TruthSocialItem],
+    threshold: float = 0.7,
+) -> List[schema.TruthSocialItem]:
+    """Dedupe Truth Social items."""
+    return dedupe_items(items, threshold)
+
+
 def dedupe_polymarket(
     items: List[schema.PolymarketItem],
     threshold: float = 0.7,

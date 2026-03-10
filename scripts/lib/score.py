@@ -528,6 +528,62 @@ def score_bluesky_items(items: List[schema.BlueskyItem]) -> List[schema.BlueskyI
     return items
 
 
+def compute_truthsocial_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
+    """Compute raw engagement score for Truth Social item.
+
+    Formula: 0.45*log1p(likes) + 0.30*log1p(reposts) + 0.25*log1p(replies)
+    Likes are primary signal; reposts indicate reach; replies indicate discussion.
+    """
+    if engagement is None:
+        return None
+
+    if engagement.likes is None and engagement.reposts is None:
+        return None
+
+    likes = log1p_safe(engagement.likes)
+    reposts = log1p_safe(engagement.reposts)
+    replies = log1p_safe(engagement.replies)
+
+    return 0.45 * likes + 0.30 * reposts + 0.25 * replies
+
+
+def score_truthsocial_items(items: List[schema.TruthSocialItem]) -> List[schema.TruthSocialItem]:
+    """Compute scores for Truth Social items."""
+    if not items:
+        return items
+
+    eng_raw = [compute_truthsocial_engagement_raw(item.engagement) for item in items]
+    eng_normalized = normalize_to_100(eng_raw)
+
+    for i, item in enumerate(items):
+        rel_score = int(item.relevance * 100)
+        rec_score = dates.recency_score(item.date)
+
+        if eng_normalized[i] is not None:
+            eng_score = int(eng_normalized[i])
+        else:
+            eng_score = DEFAULT_ENGAGEMENT
+
+        item.subs = schema.SubScores(
+            relevance=rel_score,
+            recency=rec_score,
+            engagement=eng_score,
+        )
+
+        overall = (
+            WEIGHT_RELEVANCE * rel_score +
+            WEIGHT_RECENCY * rec_score +
+            WEIGHT_ENGAGEMENT * eng_score
+        )
+
+        if eng_raw[i] is None:
+            overall -= UNKNOWN_ENGAGEMENT_PENALTY
+
+        item.score = max(0, min(100, int(overall)))
+
+    return items
+
+
 def compute_polymarket_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
     """Compute raw engagement score for Polymarket item.
 

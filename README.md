@@ -176,7 +176,7 @@ Examples:
 
 ## What It Does
 
-1. **Researches** - Scans Reddit, X, Bluesky, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web for discussions from the last 30 days
+1. **Researches** - Scans Reddit, X, Bluesky, Truth Social, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web for discussions from the last 30 days
 2. **Synthesizes** - Identifies patterns, best practices, and what actually works
 3. **Delivers** - Either writes copy-paste-ready prompts for your target tool, or gives you a curated expert-level answer
 

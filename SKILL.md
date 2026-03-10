@@ -1,7 +1,7 @@
 ---
 name: last30days
 version: "2.9.5"
-description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, Bluesky, YouTube, TikTok, Instagram, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
+description: "Research a topic from the last 30 days. Also triggered by 'last30'. Sources: Reddit, X, Bluesky, Truth Social, YouTube, TikTok, Instagram, Hacker News, Polymarket, web. Become an expert and write copy-paste-ready prompts."
 argument-hint: 'last30 AI video tools, last30 best project management tools'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
 homepage: https://github.com/mvanhorn/last30days-skill
@@ -26,6 +26,7 @@ metadata:
         - CT0
         - BSKY_HANDLE
         - BSKY_APP_PASSWORD
+        - TRUTHSOCIAL_TOKEN
       bins:
         - node
         - python3
@@ -42,15 +43,16 @@ metadata:
       - instagram
       - hackernews
       - polymarket
+      - truthsocial
       - trends
       - prompts
 ---
 
 # last30days v2.9.5: Research Any Topic from the Last 30 Days
 
-> **Permissions overview:** Reads public web/platform data and optionally saves research briefings to `~/Documents/Last30Days/`. X/Twitter search uses optional user-provided tokens (AUTH_TOKEN/CT0 env vars). Bluesky search uses optional app password (BSKY_HANDLE/BSKY_APP_PASSWORD env vars - create at bsky.app/settings/app-passwords). All credential usage and data writes are documented in the [Security & Permissions](#security--permissions) section.
+> **Permissions overview:** Reads public web/platform data and optionally saves research briefings to `~/Documents/Last30Days/`. X/Twitter search uses optional user-provided tokens (AUTH_TOKEN/CT0 env vars). Bluesky search uses optional app password (BSKY_HANDLE/BSKY_APP_PASSWORD env vars - create at bsky.app/settings/app-passwords). Truth Social search uses optional bearer token (TRUTHSOCIAL_TOKEN env var - extract from browser dev tools). All credential usage and data writes are documented in the [Security & Permissions](#security--permissions) section.
 
-Research ANY topic across Reddit, X, Bluesky, YouTube, TikTok, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
+Research ANY topic across Reddit, X, Bluesky, Truth Social, YouTube, TikTok, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 
 ## CRITICAL: Parse User Intent
 
@@ -87,7 +89,7 @@ Common patterns:
 **DISPLAY your parsing to the user.** Before running any tools, output:
 
 ```
-I'll research {TOPIC} across Reddit, X, Bluesky, TikTok, and the web to find what's been discussed in the last 30 days.
+I'll research {TOPIC} across Reddit, X, Bluesky, Truth Social, TikTok, and the web to find what's been discussed in the last 30 days.
 
 Parsed intent:
 - TOPIC = {TOPIC}
@@ -151,7 +153,7 @@ Agent mode report format:
 
 ```
 ## Research Report: {TOPIC}
-Generated: {date} | Sources: Reddit, X, Bluesky, YouTube, TikTok, HN, Polymarket, Web
+Generated: {date} | Sources: Reddit, X, Bluesky, Truth Social, YouTube, TikTok, HN, Polymarket, Web
 
 ### Key Findings
 [3-5 bullet points, highest-signal insights with citations]
@@ -504,6 +506,7 @@ KEY PATTERNS from the research:
 ├─ 📸 Instagram: {N} reels │ {N} views │ {N} likes │ {N} with captions
 ├─ 🟡 HN: {N} stories │ {N} points │ {N} comments
 ├─ 🦋 Bluesky: {N} posts │ {N} likes │ {N} reposts
+├─ 🇺🇸 Truth Social: {N} posts │ {N} likes │ {N} reposts
 ├─ 📊 Polymarket: {N} markets │ {short summary of up to 5 most relevant market odds, e.g. "Championship: 12%, #1 Seed: 28%, Big 12: 64%, vs Kansas: 71%"}
 ├─ 🌐 Web: {N} pages — Source Name, Source Name, Source Name
 └─ 🗣️ Top voices: @{handle1} ({N} likes), @{handle2} │ r/{sub1}, r/{sub2}

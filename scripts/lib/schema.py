@@ -393,6 +393,43 @@ class BlueskyItem:
 
 
 @dataclass
+class TruthSocialItem:
+    """Normalized Truth Social post."""
+    id: str              # "TS1", "TS2", ...
+    text: str
+    url: str             # truthsocial.com permalink
+    author_handle: str   # username
+    display_name: str
+    date: Optional[str] = None
+    date_confidence: str = "high"  # Mastodon API has exact timestamps
+    engagement: Optional[Engagement] = None  # likes, reposts, replies
+    relevance: float = 0.5
+    why_relevant: str = ""
+    subs: SubScores = field(default_factory=SubScores)
+    score: int = 0
+    cross_refs: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {
+            'id': self.id,
+            'text': self.text,
+            'url': self.url,
+            'author_handle': self.author_handle,
+            'display_name': self.display_name,
+            'date': self.date,
+            'date_confidence': self.date_confidence,
+            'engagement': self.engagement.to_dict() if self.engagement else None,
+            'relevance': self.relevance,
+            'why_relevant': self.why_relevant,
+            'subs': self.subs.to_dict(),
+            'score': self.score,
+        }
+        if self.cross_refs:
+            d['cross_refs'] = self.cross_refs
+        return d
+
+
+@dataclass
 class PolymarketItem:
     """Normalized Polymarket prediction market item."""
     id: str           # "PM1", "PM2", ...
@@ -453,6 +490,7 @@ class Report:
     instagram: List[InstagramItem] = field(default_factory=list)
     hackernews: List[HackerNewsItem] = field(default_factory=list)
     bluesky: List[BlueskyItem] = field(default_factory=list)
+    truthsocial: List[TruthSocialItem] = field(default_factory=list)
     polymarket: List[PolymarketItem] = field(default_factory=list)
     best_practices: List[str] = field(default_factory=list)
     prompt_pack: List[str] = field(default_factory=list)
@@ -466,6 +504,7 @@ class Report:
     instagram_error: Optional[str] = None
     hackernews_error: Optional[str] = None
     bluesky_error: Optional[str] = None
+    truthsocial_error: Optional[str] = None
     polymarket_error: Optional[str] = None
     # Handle resolution
     resolved_x_handle: Optional[str] = None
@@ -492,6 +531,7 @@ class Report:
             'instagram': [ig.to_dict() for ig in self.instagram],
             'hackernews': [h.to_dict() for h in self.hackernews],
             'bluesky': [b.to_dict() for b in self.bluesky],
+            'truthsocial': [ts.to_dict() for ts in self.truthsocial],
             'polymarket': [p.to_dict() for p in self.polymarket],
             'best_practices': self.best_practices,
             'prompt_pack': self.prompt_pack,
@@ -515,6 +555,8 @@ class Report:
             d['hackernews_error'] = self.hackernews_error
         if self.bluesky_error:
             d['bluesky_error'] = self.bluesky_error
+        if self.truthsocial_error:
+            d['truthsocial_error'] = self.truthsocial_error
         if self.polymarket_error:
             d['polymarket_error'] = self.polymarket_error
         if self.from_cache:
@@ -694,6 +736,29 @@ class Report:
                 cross_refs=h.get('cross_refs', []),
             ))
 
+        # Reconstruct Truth Social items (backward compat: key may not exist)
+        ts_items = []
+        for ts in data.get('truthsocial', []):
+            eng = None
+            if ts.get('engagement'):
+                eng = Engagement(**ts['engagement'])
+            subs = SubScores(**ts.get('subs', {})) if ts.get('subs') else SubScores()
+            ts_items.append(TruthSocialItem(
+                id=ts['id'],
+                text=ts['text'],
+                url=ts['url'],
+                author_handle=ts.get('author_handle', ''),
+                display_name=ts.get('display_name', ''),
+                date=ts.get('date'),
+                date_confidence=ts.get('date_confidence', 'high'),
+                engagement=eng,
+                relevance=ts.get('relevance', 0.5),
+                why_relevant=ts.get('why_relevant', ''),
+                subs=subs,
+                score=ts.get('score', 0),
+                cross_refs=ts.get('cross_refs', []),
+            ))
+
         # Reconstruct Polymarket items (backward compat: key may not exist)
         pm_items = []
         for p in data.get('polymarket', []):
@@ -735,6 +800,7 @@ class Report:
             tiktok=tiktok_items,
             instagram=ig_items,
             hackernews=hn_items,
+            truthsocial=ts_items,
             polymarket=pm_items,
             best_practices=data.get('best_practices', []),
             prompt_pack=data.get('prompt_pack', []),
@@ -746,6 +812,7 @@ class Report:
             tiktok_error=data.get('tiktok_error'),
             instagram_error=data.get('instagram_error'),
             hackernews_error=data.get('hackernews_error'),
+            truthsocial_error=data.get('truthsocial_error'),
             polymarket_error=data.get('polymarket_error'),
             resolved_x_handle=data.get('resolved_x_handle'),
             from_cache=data.get('from_cache', False),
