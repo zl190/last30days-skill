@@ -480,6 +480,14 @@ def is_hackernews_available() -> bool:
     return True
 
 
+def is_bluesky_available() -> bool:
+    """Check if Bluesky source is available.
+
+    Always returns True - AT Protocol search is free, no key needed.
+    """
+    return True
+
+
 def is_polymarket_available() -> bool:
     """Check if Polymarket source is available.
 

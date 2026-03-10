@@ -38,14 +38,14 @@ _child_pids: set = set()
 _child_pids_lock = threading.Lock()
 
 TIMEOUT_PROFILES = {
-    "quick":   {"global": 90,  "future": 30, "reddit_future": 60,  "youtube_future": 60,  "tiktok_future": 90,   "instagram_future": 90,   "hackernews_future": 30,  "polymarket_future": 15,  "http": 15, "enrich_per": 8,  "enrich_total": 30, "enrich_max_items": 10},
-    "default": {"global": 180, "future": 60, "reddit_future": 90,  "youtube_future": 90,  "tiktok_future": 120,  "instagram_future": 120,  "hackernews_future": 60,  "polymarket_future": 30,  "http": 30, "enrich_per": 15, "enrich_total": 45, "enrich_max_items": 15},
-    "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "tiktok_future": 150,  "instagram_future": 150,  "hackernews_future": 90,  "polymarket_future": 45,  "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
+    "quick":   {"global": 90,  "future": 30, "reddit_future": 60,  "youtube_future": 60,  "tiktok_future": 90,   "instagram_future": 90,   "hackernews_future": 30,  "bluesky_future": 30,  "polymarket_future": 15,  "http": 15, "enrich_per": 8,  "enrich_total": 30, "enrich_max_items": 10},
+    "default": {"global": 180, "future": 60, "reddit_future": 90,  "youtube_future": 90,  "tiktok_future": 120,  "instagram_future": 120,  "hackernews_future": 60,  "bluesky_future": 60,  "polymarket_future": 30,  "http": 30, "enrich_per": 15, "enrich_total": 45, "enrich_max_items": 15},
+    "deep":    {"global": 300, "future": 90, "reddit_future": 120, "youtube_future": 120, "tiktok_future": 150,  "instagram_future": 150,  "hackernews_future": 90,  "bluesky_future": 90,  "polymarket_future": 45,  "http": 30, "enrich_per": 15, "enrich_total": 60, "enrich_max_items": 25},
 }
 
 # Valid source names for the --search flag
 VALID_SEARCH_SOURCES = {
-    "reddit", "x", "hn", "youtube", "tiktok", "instagram",
+    "reddit", "x", "hn", "bluesky", "bsky", "youtube", "tiktok", "instagram",
     "polymarket", "web", "xiaohongshu", "xhs",
 }
 
@@ -135,6 +135,7 @@ def _install_global_timeout(timeout_seconds: int):
 
 from lib import (
     bird_x,
+    bluesky,
     dates,
     dedupe,
     hackernews,
@@ -513,6 +514,34 @@ def _search_hackernews(
     return hn_items, hn_error
 
 
+def _search_bluesky(
+    topic: str,
+    from_date: str,
+    to_date: str,
+    depth: str,
+) -> tuple:
+    """Search Bluesky via AT Protocol (runs in thread).
+
+    Returns:
+        Tuple of (bsky_items, bsky_error)
+    """
+    bsky_error = None
+
+    try:
+        response = bluesky.search_bluesky(
+            topic, from_date, to_date, depth=depth,
+        )
+    except Exception as e:
+        return [], f"{type(e).__name__}: {e}"
+
+    bsky_items = bluesky.parse_bluesky_response(response)
+
+    if response.get("error"):
+        bsky_error = response["error"]
+
+    return bsky_items, bsky_error
+
+
 def _search_polymarket(
     topic: str,
     from_date: str,
@@ -823,6 +852,7 @@ def run_research(
     timeouts: dict = None,
     resolved_handle: str = None,
     do_hackernews: bool = True,
+    do_bluesky: bool = True,
     do_polymarket: bool = True,
     no_native_web: bool = False,
 ) -> tuple:
@@ -830,10 +860,10 @@ def run_research(
 
     Returns:
         Tuple of (reddit_items, x_items, youtube_items, tiktok_items, instagram_items,
-                  hackernews_items, polymarket_items, web_items, web_needed,
+                  hackernews_items, bluesky_items, polymarket_items, web_items, web_needed,
                   raw_openai, raw_xai, raw_reddit_enriched,
                   reddit_error, x_error, youtube_error, tiktok_error, instagram_error,
-                  hackernews_error, polymarket_error, web_error)
+                  hackernews_error, bluesky_error, polymarket_error, web_error)
 
     Note: web_needed is True when web search should be performed by the assistant
     (i.e., no native web search API keys are configured). When native web search
@@ -849,6 +879,7 @@ def run_research(
     tiktok_items = []
     instagram_items = []
     hackernews_items = []
+    bluesky_items = []
     polymarket_items = []
     web_items = []
     raw_openai = None
@@ -860,6 +891,7 @@ def run_research(
     tiktok_error = None
     instagram_error = None
     hackernews_error = None
+    bluesky_error = None
     polymarket_error = None
     web_error = None
     xiaohongshu_error = None
@@ -944,7 +976,7 @@ def run_research(
                     progress.show_error(f"Instagram error: {e}")
             if progress:
                 progress.end_instagram(len(instagram_items))
-        return reddit_items, x_items, youtube_items, tiktok_items, instagram_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, tiktok_error, instagram_error, hackernews_error, polymarket_error, web_error
+        return reddit_items, x_items, youtube_items, tiktok_items, instagram_items, hackernews_items, bluesky_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, tiktok_error, instagram_error, hackernews_error, bluesky_error, polymarket_error, web_error
 
     # Determine which searches to run
     do_reddit = sources in ("both", "reddit", "all", "reddit-web")
@@ -960,6 +992,7 @@ def run_research(
     instagram_future = None
     xiaohongshu_future = None
     hackernews_future = None
+    bluesky_future = None
     polymarket_future = None
     web_future = None
     max_workers = (
@@ -969,6 +1002,7 @@ def run_research(
         + (1 if run_instagram else 0)
         + (1 if run_xiaohongshu else 0)
         + (1 if do_hackernews else 0)
+        + (1 if do_bluesky else 0)
         + (1 if do_polymarket else 0)
         + (1 if web_backend else 0)
     )
@@ -1024,6 +1058,11 @@ def run_research(
                 progress.start_hackernews()
             hackernews_future = executor.submit(
                 _search_hackernews, topic, from_date, to_date, depth
+            )
+
+        if do_bluesky:
+            bluesky_future = executor.submit(
+                _search_bluesky, topic, from_date, to_date, depth
             )
 
         if do_polymarket:
@@ -1157,6 +1196,21 @@ def run_research(
                     progress.show_error(f"HN error: {e}")
             if progress:
                 progress.end_hackernews(len(hackernews_items))
+
+        if bluesky_future:
+            bsky_timeout = timeouts.get("bluesky_future", future_timeout)
+            try:
+                bluesky_items, bluesky_error = bluesky_future.result(timeout=bsky_timeout)
+                if bluesky_error and progress:
+                    progress.show_error(f"Bluesky error: {bluesky_error}")
+            except TimeoutError:
+                bluesky_error = f"Bluesky search timed out after {bsky_timeout}s"
+                if progress:
+                    progress.show_error(bluesky_error)
+            except Exception as e:
+                bluesky_error = f"{type(e).__name__}: {e}"
+                if progress:
+                    progress.show_error(f"Bluesky error: {e}")
 
         if polymarket_future:
             pm_timeout = timeouts.get("polymarket_future", future_timeout)
@@ -1292,7 +1346,7 @@ def run_research(
         if sup_x:
             x_items.extend(sup_x)
 
-    return reddit_items, x_items, youtube_items, tiktok_items, instagram_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, tiktok_error, instagram_error, hackernews_error, polymarket_error, web_error
+    return reddit_items, x_items, youtube_items, tiktok_items, instagram_items, hackernews_items, bluesky_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, tiktok_error, instagram_error, hackernews_error, bluesky_error, polymarket_error, web_error
 
 
 def main():
@@ -1460,6 +1514,7 @@ def main():
             "xiaohongshu": has_xiaohongshu,
             "xiaohongshu_api_base": env.get_xiaohongshu_api_base(config),
             "hackernews": True,
+            "bluesky": True,
             "polymarket": True,
             "web_search_backend": web_source,
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
@@ -1493,6 +1548,7 @@ def main():
         "instagram": has_instagram,
         "xiaohongshu": has_xiaohongshu,
         "hackernews": True,
+        "bluesky": True,
         "polymarket": True,
         "web_search_backend": "deferred to assistant" if args.no_native_web else web_source,
     }
@@ -1574,6 +1630,7 @@ def main():
 
     # Apply --search flag: restrict sources to the specified subset
     search_do_hackernews = True
+    search_do_bluesky = True
     search_do_polymarket = True
     search_run_youtube = has_ytdlp
     search_run_tiktok = has_tiktok
@@ -1584,6 +1641,7 @@ def main():
         has_reddit = "reddit" in search_sources
         has_x = "x" in search_sources
         search_do_hackernews = "hn" in search_sources
+        search_do_bluesky = "bluesky" in search_sources or "bsky" in search_sources
         search_do_polymarket = "polymarket" in search_sources
         search_run_youtube = "youtube" in search_sources and has_ytdlp
         search_run_tiktok = "tiktok" in search_sources and has_tiktok
@@ -1603,7 +1661,7 @@ def main():
             sources = "web"  # hn/polymarket only; no Reddit/X
 
     # Run research
-    reddit_items, x_items, youtube_items, tiktok_items, instagram_items, hackernews_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, tiktok_error, instagram_error, hackernews_error, polymarket_error, web_error = run_research(
+    reddit_items, x_items, youtube_items, tiktok_items, instagram_items, hackernews_items, bluesky_items, polymarket_items, web_items, web_needed, raw_openai, raw_xai, raw_reddit_enriched, reddit_error, x_error, youtube_error, tiktok_error, instagram_error, hackernews_error, bluesky_error, polymarket_error, web_error = run_research(
         args.topic,
         sources,
         config,
@@ -1621,6 +1679,7 @@ def main():
         timeouts=timeouts,
         resolved_handle=args.x_handle,
         do_hackernews=search_do_hackernews,
+        do_bluesky=search_do_bluesky,
         do_polymarket=search_do_polymarket,
         no_native_web=args.no_native_web,
     )
@@ -1635,6 +1694,7 @@ def main():
     normalized_tiktok = normalize.normalize_tiktok_items(tiktok_items, from_date, to_date) if tiktok_items else []
     normalized_ig = normalize.normalize_instagram_items(instagram_items, from_date, to_date) if instagram_items else []
     normalized_hn = normalize.normalize_hackernews_items(hackernews_items, from_date, to_date) if hackernews_items else []
+    normalized_bsky = normalize.normalize_bluesky_items(bluesky_items, from_date, to_date) if bluesky_items else []
     normalized_pm = normalize.normalize_polymarket_items(polymarket_items, from_date, to_date) if polymarket_items else []
     normalized_web = websearch.normalize_websearch_items(web_items, from_date, to_date) if web_items else []
 
@@ -1651,6 +1711,7 @@ def main():
     # Instagram: hard date filter (instagram.py already pre-filters, but safety net)
     filtered_ig = normalize.filter_by_date_range(normalized_ig, from_date, to_date) if normalized_ig else []
     filtered_hn = normalize.filter_by_date_range(normalized_hn, from_date, to_date) if normalized_hn else []
+    filtered_bsky = normalize.filter_by_date_range(normalized_bsky, from_date, to_date) if normalized_bsky else []
     # Polymarket: skip hard date filter - markets are active/traded, updatedAt is fine
     filtered_pm = normalized_pm
     filtered_web = normalize.filter_by_date_range(normalized_web, from_date, to_date) if normalized_web else []
@@ -1662,6 +1723,7 @@ def main():
     scored_tiktok = score.score_tiktok_items(filtered_tiktok) if filtered_tiktok else []
     scored_ig = score.score_instagram_items(filtered_ig) if filtered_ig else []
     scored_hn = score.score_hackernews_items(filtered_hn) if filtered_hn else []
+    scored_bsky = score.score_bluesky_items(filtered_bsky) if filtered_bsky else []
     scored_pm = score.score_polymarket_items(filtered_pm) if filtered_pm else []
     scored_web = score.score_websearch_items(filtered_web) if filtered_web else []
 
@@ -1672,6 +1734,7 @@ def main():
     sorted_tiktok = score.sort_items(scored_tiktok) if scored_tiktok else []
     sorted_ig = score.sort_items(scored_ig) if scored_ig else []
     sorted_hn = score.sort_items(scored_hn) if scored_hn else []
+    sorted_bsky = score.sort_items(scored_bsky) if scored_bsky else []
     sorted_pm = score.sort_items(scored_pm) if scored_pm else []
     sorted_web = score.sort_items(scored_web) if scored_web else []
 
@@ -1682,6 +1745,7 @@ def main():
     deduped_tiktok = dedupe.dedupe_tiktok(sorted_tiktok) if sorted_tiktok else []
     deduped_ig = dedupe.dedupe_instagram(sorted_ig) if sorted_ig else []
     deduped_hn = dedupe.dedupe_hackernews(sorted_hn) if sorted_hn else []
+    deduped_bsky = dedupe.dedupe_bluesky(sorted_bsky) if sorted_bsky else []
     deduped_pm = dedupe.dedupe_polymarket(sorted_pm) if sorted_pm else []
     deduped_web = websearch.dedupe_websearch(sorted_web) if sorted_web else []
 
@@ -1694,7 +1758,7 @@ def main():
 
     # Cross-source linking: annotate items that discuss the same story
     dedupe.cross_source_link(
-        deduped_reddit, deduped_x, deduped_youtube, deduped_tiktok, deduped_ig, deduped_hn, deduped_pm, deduped_web,
+        deduped_reddit, deduped_x, deduped_youtube, deduped_tiktok, deduped_ig, deduped_hn, deduped_bsky, deduped_pm, deduped_web,
     )
 
     progress.end_processing()
@@ -1714,6 +1778,7 @@ def main():
     report.tiktok = deduped_tiktok
     report.instagram = deduped_ig
     report.hackernews = deduped_hn
+    report.bluesky = deduped_bsky
     report.polymarket = deduped_pm
     report.web = deduped_web
     report.reddit_error = reddit_error
@@ -1722,6 +1787,7 @@ def main():
     report.tiktok_error = tiktok_error
     report.instagram_error = instagram_error
     report.hackernews_error = hackernews_error
+    report.bluesky_error = bluesky_error
     report.polymarket_error = polymarket_error
     report.web_error = web_error
     report.resolved_x_handle = args.x_handle
@@ -1825,6 +1891,16 @@ def main():
                 "author": item.author,
                 "content": item.title,
                 "engagement_score": item.engagement.score if item.engagement else 0,
+                "relevance_score": item.relevance,
+            })
+        for item in deduped_bsky:
+            findings.append({
+                "source": "bluesky",
+                "url": item.url,
+                "title": item.text[:100],
+                "author": item.author_handle,
+                "content": item.text,
+                "engagement_score": item.engagement.likes if item.engagement else 0,
                 "relevance_score": item.relevance,
             })
         for item in deduped_pm:

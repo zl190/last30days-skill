@@ -226,6 +226,14 @@ def dedupe_hackernews(
     return dedupe_items(items, threshold)
 
 
+def dedupe_bluesky(
+    items: List[schema.BlueskyItem],
+    threshold: float = 0.7,
+) -> List[schema.BlueskyItem]:
+    """Dedupe Bluesky items."""
+    return dedupe_items(items, threshold)
+
+
 def dedupe_polymarket(
     items: List[schema.PolymarketItem],
     threshold: float = 0.7,

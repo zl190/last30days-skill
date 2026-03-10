@@ -468,6 +468,66 @@ def score_hackernews_items(items: List[schema.HackerNewsItem]) -> List[schema.Ha
     return items
 
 
+def compute_bluesky_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
+    """Compute raw engagement score for Bluesky item.
+
+    Formula: 0.40*log1p(likes) + 0.30*log1p(reposts) + 0.20*log1p(replies) + 0.10*log1p(quotes)
+    Likes are primary signal; reposts indicate reach; replies indicate discussion depth.
+    """
+    if engagement is None:
+        return None
+
+    if engagement.likes is None and engagement.reposts is None:
+        return None
+
+    likes = log1p_safe(engagement.likes)
+    reposts = log1p_safe(engagement.reposts)
+    replies = log1p_safe(engagement.replies)
+    quotes = log1p_safe(engagement.quotes)
+
+    return 0.40 * likes + 0.30 * reposts + 0.20 * replies + 0.10 * quotes
+
+
+def score_bluesky_items(items: List[schema.BlueskyItem]) -> List[schema.BlueskyItem]:
+    """Compute scores for Bluesky items.
+
+    Uses same weight structure as Reddit/X (relevance + recency + engagement).
+    """
+    if not items:
+        return items
+
+    eng_raw = [compute_bluesky_engagement_raw(item.engagement) for item in items]
+    eng_normalized = normalize_to_100(eng_raw)
+
+    for i, item in enumerate(items):
+        rel_score = int(item.relevance * 100)
+        rec_score = dates.recency_score(item.date)
+
+        if eng_normalized[i] is not None:
+            eng_score = int(eng_normalized[i])
+        else:
+            eng_score = DEFAULT_ENGAGEMENT
+
+        item.subs = schema.SubScores(
+            relevance=rel_score,
+            recency=rec_score,
+            engagement=eng_score,
+        )
+
+        overall = (
+            WEIGHT_RELEVANCE * rel_score +
+            WEIGHT_RECENCY * rec_score +
+            WEIGHT_ENGAGEMENT * eng_score
+        )
+
+        if eng_raw[i] is None:
+            overall -= UNKNOWN_ENGAGEMENT_PENALTY
+
+        item.score = max(0, min(100, int(overall)))
+
+    return items
+
+
 def compute_polymarket_engagement_raw(engagement: Optional[schema.Engagement]) -> Optional[float]:
     """Compute raw engagement score for Polymarket item.
 
