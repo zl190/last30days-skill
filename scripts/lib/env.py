@@ -255,6 +255,8 @@ def get_config() -> Dict[str, Any]:
         ('APIFY_API_TOKEN', None),
         ('AUTH_TOKEN', None),
         ('CT0', None),
+        ('BSKY_HANDLE', None),
+        ('BSKY_APP_PASSWORD', None),
     ]
 
     for key, default in keys:
@@ -480,12 +482,12 @@ def is_hackernews_available() -> bool:
     return True
 
 
-def is_bluesky_available() -> bool:
+def is_bluesky_available(config: Dict[str, Any]) -> bool:
     """Check if Bluesky source is available.
 
-    Always returns True - AT Protocol search is free, no key needed.
+    Requires BSKY_HANDLE and BSKY_APP_PASSWORD (app password from bsky.app/settings).
     """
-    return True
+    return bool(config.get('BSKY_HANDLE') and config.get('BSKY_APP_PASSWORD'))
 
 
 def is_polymarket_available() -> bool:

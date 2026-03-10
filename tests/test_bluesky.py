@@ -3,6 +3,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 from lib import bluesky
@@ -97,6 +98,80 @@ class TestDepthConfig(unittest.TestCase):
         quick = bluesky.DEPTH_CONFIG["quick"]
         deep = bluesky.DEPTH_CONFIG["deep"]
         self.assertGreater(deep, quick)
+
+
+class TestCreateSession(unittest.TestCase):
+    def setUp(self):
+        bluesky._cached_token = None
+
+    def tearDown(self):
+        bluesky._cached_token = None
+
+    @patch("lib.bluesky.http.request")
+    def test_returns_token(self, mock_request):
+        mock_request.return_value = {"accessJwt": "tok123", "refreshJwt": "ref456"}
+        token = bluesky._create_session("user.bsky.social", "app-pw")
+        self.assertEqual(token, "tok123")
+        mock_request.assert_called_once()
+
+    @patch("lib.bluesky.http.request")
+    def test_caches_token(self, mock_request):
+        mock_request.return_value = {"accessJwt": "tok123", "refreshJwt": "ref456"}
+        bluesky._create_session("user.bsky.social", "app-pw")
+        bluesky._create_session("user.bsky.social", "app-pw")
+        mock_request.assert_called_once()  # Only one HTTP call
+
+    @patch("lib.bluesky.http.request")
+    def test_returns_none_on_failure(self, mock_request):
+        mock_request.side_effect = Exception("connection refused")
+        token = bluesky._create_session("user.bsky.social", "app-pw")
+        self.assertIsNone(token)
+
+    @patch("lib.bluesky.http.request")
+    def test_returns_none_on_missing_jwt(self, mock_request):
+        mock_request.return_value = {"did": "did:plc:abc"}
+        token = bluesky._create_session("user.bsky.social", "app-pw")
+        self.assertIsNone(token)
+
+
+class TestSearchBlueskyAuth(unittest.TestCase):
+    def setUp(self):
+        bluesky._cached_token = None
+
+    def tearDown(self):
+        bluesky._cached_token = None
+
+    def test_no_config_returns_error(self):
+        result = bluesky.search_bluesky("test", "2026-01-01", "2026-03-09")
+        self.assertEqual(result["posts"], [])
+        self.assertIn("not configured", result["error"])
+
+    def test_empty_config_returns_error(self):
+        result = bluesky.search_bluesky("test", "2026-01-01", "2026-03-09", config={})
+        self.assertEqual(result["posts"], [])
+        self.assertIn("not configured", result["error"])
+
+    @patch("lib.bluesky.http.request")
+    def test_auth_failure_returns_error(self, mock_request):
+        mock_request.side_effect = Exception("401 Unauthorized")
+        config = {"BSKY_HANDLE": "user.bsky.social", "BSKY_APP_PASSWORD": "pw"}
+        result = bluesky.search_bluesky("test", "2026-01-01", "2026-03-09", config=config)
+        self.assertEqual(result["posts"], [])
+        self.assertIn("auth failed", result["error"])
+
+    @patch("lib.bluesky.http.request")
+    def test_successful_search_passes_bearer(self, mock_request):
+        # First call: createSession, second call: searchPosts
+        mock_request.side_effect = [
+            {"accessJwt": "tok123", "refreshJwt": "ref456"},
+            {"posts": [{"uri": "at://did/app.bsky.feed.post/abc", "author": {"handle": "u1"}, "record": {"text": "hi"}}]},
+        ]
+        config = {"BSKY_HANDLE": "user.bsky.social", "BSKY_APP_PASSWORD": "pw"}
+        result = bluesky.search_bluesky("test", "2026-01-01", "2026-03-09", config=config)
+        self.assertEqual(len(result["posts"]), 1)
+        # Verify the search call included the Bearer token
+        search_call = mock_request.call_args_list[1]
+        self.assertEqual(search_call.kwargs.get("headers", {}), {"Authorization": "Bearer tok123"})
 
 
 if __name__ == "__main__":

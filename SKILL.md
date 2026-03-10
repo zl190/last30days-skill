@@ -24,6 +24,8 @@ metadata:
         - APIFY_API_TOKEN
         - AUTH_TOKEN
         - CT0
+        - BSKY_HANDLE
+        - BSKY_APP_PASSWORD
       bins:
         - node
         - python3
@@ -46,7 +48,7 @@ metadata:
 
 # last30days v2.9.5: Research Any Topic from the Last 30 Days
 
-> **Permissions overview:** Reads public web/platform data and optionally saves research briefings to `~/Documents/Last30Days/`. X/Twitter search uses optional user-provided tokens (AUTH_TOKEN/CT0 env vars) — no browser session access. All credential usage and data writes are documented in the [Security & Permissions](#security--permissions) section.
+> **Permissions overview:** Reads public web/platform data and optionally saves research briefings to `~/Documents/Last30Days/`. X/Twitter search uses optional user-provided tokens (AUTH_TOKEN/CT0 env vars). Bluesky search uses optional app password (BSKY_HANDLE/BSKY_APP_PASSWORD env vars - create at bsky.app/settings/app-passwords). All credential usage and data writes are documented in the [Security & Permissions](#security--permissions) section.
 
 Research ANY topic across Reddit, X, Bluesky, YouTube, TikTok, Hacker News, Polymarket, and the web. Surface what people are actually discussing, recommending, betting on, and debating right now.
 

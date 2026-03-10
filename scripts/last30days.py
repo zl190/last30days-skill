@@ -519,6 +519,7 @@ def _search_bluesky(
     from_date: str,
     to_date: str,
     depth: str,
+    config: dict = None,
 ) -> tuple:
     """Search Bluesky via AT Protocol (runs in thread).
 
@@ -529,7 +530,7 @@ def _search_bluesky(
 
     try:
         response = bluesky.search_bluesky(
-            topic, from_date, to_date, depth=depth,
+            topic, from_date, to_date, depth=depth, config=config,
         )
     except Exception as e:
         return [], f"{type(e).__name__}: {e}"
@@ -1062,7 +1063,7 @@ def run_research(
 
         if do_bluesky:
             bluesky_future = executor.submit(
-                _search_bluesky, topic, from_date, to_date, depth
+                _search_bluesky, topic, from_date, to_date, depth, config
             )
 
         if do_polymarket:
@@ -1497,6 +1498,9 @@ def main():
     # Auto-detect Xiaohongshu HTTP API (requires service + login)
     has_xiaohongshu = env.is_xiaohongshu_available(config)
 
+    # Auto-detect Bluesky (requires BSKY_HANDLE + BSKY_APP_PASSWORD)
+    has_bluesky = env.is_bluesky_available(config)
+
     # --diagnose: show source availability and exit
     if args.diagnose:
         web_source = env.get_web_search_source(config)
@@ -1514,7 +1518,7 @@ def main():
             "xiaohongshu": has_xiaohongshu,
             "xiaohongshu_api_base": env.get_xiaohongshu_api_base(config),
             "hackernews": True,
-            "bluesky": True,
+            "bluesky": has_bluesky,
             "polymarket": True,
             "web_search_backend": web_source,
             "parallel_ai": bool(config.get("PARALLEL_API_KEY")),
@@ -1630,7 +1634,7 @@ def main():
 
     # Apply --search flag: restrict sources to the specified subset
     search_do_hackernews = True
-    search_do_bluesky = True
+    search_do_bluesky = has_bluesky
     search_do_polymarket = True
     search_run_youtube = has_ytdlp
     search_run_tiktok = has_tiktok
@@ -1641,7 +1645,7 @@ def main():
         has_reddit = "reddit" in search_sources
         has_x = "x" in search_sources
         search_do_hackernews = "hn" in search_sources
-        search_do_bluesky = "bluesky" in search_sources or "bsky" in search_sources
+        search_do_bluesky = ("bluesky" in search_sources or "bsky" in search_sources) and has_bluesky
         search_do_polymarket = "polymarket" in search_sources
         search_run_youtube = "youtube" in search_sources and has_ytdlp
         search_run_tiktok = "tiktok" in search_sources and has_tiktok

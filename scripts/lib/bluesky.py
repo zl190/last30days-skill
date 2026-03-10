@@ -1,7 +1,7 @@
-"""Bluesky search via AT Protocol (free, no auth required).
+"""Bluesky search via AT Protocol (requires app password).
 
-Uses public.api.bsky.app for post discovery.
-No API key needed - just HTTP calls via stdlib urllib.
+Uses bsky.social for auth and public.api.bsky.app for post search.
+Requires BSKY_HANDLE and BSKY_APP_PASSWORD env vars.
 """
 
 import math
@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from . import http
 
+BSKY_SESSION_URL = "https://bsky.social/xrpc/com.atproto.server.createSession"
 BSKY_SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
 
 DEPTH_CONFIG = {
@@ -20,12 +21,48 @@ DEPTH_CONFIG = {
     "deep": 60,
 }
 
+# Module-level token cache (valid for the lifetime of a single research run)
+_cached_token: Optional[str] = None
+
 
 def _log(msg: str):
     """Log to stderr (only in TTY mode to avoid cluttering Claude Code output)."""
     if sys.stderr.isatty():
         sys.stderr.write(f"[Bluesky] {msg}\n")
         sys.stderr.flush()
+
+
+def _create_session(handle: str, app_password: str) -> Optional[str]:
+    """Create an AT Protocol session and return the access token.
+
+    Args:
+        handle: Bluesky handle (e.g. user.bsky.social)
+        app_password: App password from bsky.app/settings/app-passwords
+
+    Returns:
+        Access JWT string, or None on failure.
+    """
+    global _cached_token
+    if _cached_token:
+        return _cached_token
+
+    try:
+        response = http.request(
+            "POST",
+            BSKY_SESSION_URL,
+            json_data={"identifier": handle, "password": app_password},
+            timeout=15,
+        )
+        token = response.get("accessJwt")
+        if token:
+            _cached_token = token
+            _log("Session created successfully")
+            return token
+        _log("No accessJwt in session response")
+        return None
+    except Exception as e:
+        _log(f"Session creation failed: {e}")
+        return None
 
 
 def _extract_core_subject(topic: str) -> str:
@@ -73,18 +110,32 @@ def search_bluesky(
     from_date: str,
     to_date: str,
     depth: str = "default",
+    config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Search Bluesky via AT Protocol public API.
+    """Search Bluesky via AT Protocol API.
 
     Args:
         topic: Search topic
         from_date: Start date (YYYY-MM-DD)
         to_date: End date (YYYY-MM-DD)
         depth: 'quick', 'default', or 'deep'
+        config: Config dict with BSKY_HANDLE and BSKY_APP_PASSWORD
 
     Returns:
         Dict with 'posts' list from AT Protocol response.
     """
+    config = config or {}
+    handle = config.get("BSKY_HANDLE", "")
+    app_password = config.get("BSKY_APP_PASSWORD", "")
+
+    if not handle or not app_password:
+        return {"posts": [], "error": "Bluesky credentials not configured"}
+
+    # Authenticate
+    token = _create_session(handle, app_password)
+    if not token:
+        return {"posts": [], "error": "Bluesky auth failed"}
+
     count = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
     core_topic = _extract_core_subject(topic)
 
@@ -99,7 +150,11 @@ def search_bluesky(
     url = f"{BSKY_SEARCH_URL}?{urlencode(params)}"
 
     try:
-        response = http.request("GET", url, timeout=30)
+        response = http.request(
+            "GET", url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
     except http.HTTPError as e:
         _log(f"Search failed: {e}")
         return {"posts": [], "error": str(e)}
