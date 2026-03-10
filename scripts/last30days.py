@@ -151,6 +151,7 @@ from lib import (
     render,
     schema,
     score,
+    scrapecreators_x,
     ui,
     tiktok,
     instagram,
@@ -352,6 +353,25 @@ def _search_x(
         x_items = bird_x.parse_bird_response(raw_response or {})
 
         # Check for error in response (Bird returns list on success, dict on error)
+        if raw_response and isinstance(raw_response, dict) and raw_response.get("error") and not x_error:
+            x_error = raw_response["error"]
+
+        return x_items, raw_response, x_error
+
+    # Use ScrapeCreators if specified
+    if x_source == "scrapecreators":
+        try:
+            raw_response = scrapecreators_x.search_x(
+                topic, from_date, to_date,
+                depth=depth,
+                token=config.get("SCRAPECREATORS_API_KEY"),
+            )
+        except Exception as e:
+            raw_response = {"error": str(e)}
+            x_error = f"{type(e).__name__}: {e}"
+
+        x_items = scrapecreators_x.parse_x_response(raw_response or {})
+
         if raw_response and isinstance(raw_response, dict) and raw_response.get("error") and not x_error:
             x_error = raw_response["error"]
 
@@ -1481,14 +1501,14 @@ def main():
     # Check available sources (accounting for Bird auto-detection)
     available = env.get_available_sources(config)
 
-    # Override available if Bird is ready
-    if x_source == 'bird':
+    # Override available if Bird or ScrapeCreators provides X
+    if x_source in ('bird', 'scrapecreators'):
         if available == 'reddit':
-            available = 'both'  # Now have both Reddit + X (via Bird)
+            available = 'both'  # Now have both Reddit + X
         elif available == 'reddit-web':
-            available = 'all'  # Reddit + X (via Bird) + Web
+            available = 'all'  # Reddit + X + Web
         elif available == 'web':
-            available = 'x-web'  # X via Bird + Web
+            available = 'x-web'  # X + Web
 
     # Mock mode can work without keys
     if args.mock:
@@ -1724,7 +1744,7 @@ def main():
         if x_source_status["bird_installed"]:
             source_info["x_skip_reason"] = "Bird installed but not authenticated — log into x.com in browser"
         else:
-            source_info["x_skip_reason"] = "No Bird CLI or XAI_API_KEY (Node.js 22+ needed for Bird)"
+            source_info["x_skip_reason"] = "No Bird CLI, XAI_API_KEY, or SCRAPECREATORS_API_KEY"
     if not has_ytdlp:
         source_info["youtube_skip_reason"] = "yt-dlp not installed — fix: brew install yt-dlp"
     elif has_ytdlp and not report.youtube:
