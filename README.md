@@ -1,4 +1,10 @@
-# /last30days v2.9.1
+# /last30days v2.9.5
+
+### Claude Code (recommended)
+```
+/plugin marketplace add mvanhorn/last30days-skill
+/plugin install last30days@last30days-skill
+```
 
 [![ClawHub](https://img.shields.io/badge/ClawHub-last30days--official-blue)](https://clawhub.ai/skills/last30days-official)
 
@@ -6,7 +12,16 @@
 clawhub install last30days-official
 ```
 
-**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web from the last 30 days, finds what the community is actually upvoting, sharing, betting on, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
+**The AI world reinvents itself every month. This skill keeps you current.** /last30days researches your topic across Reddit, X, Bluesky, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web from the last 30 days, finds what the community is actually upvoting, sharing, betting on, and saying on camera, and writes you a grounded narrative with real citations. Whether it's Seedance 2.0 access, paper.design prompts, or the latest Nano Banana Pro techniques, you'll know what people who are paying attention already know.
+
+**New in v2.9.5 — Bluesky, Comparative Mode, ScrapeCreators X:**
+
+- **Bluesky/AT Protocol** is now a social source. Opt-in via `BSKY_HANDLE` + `BSKY_APP_PASSWORD` (create at bsky.app/settings/app-passwords). Full pipeline: search, score, dedupe, render.
+- **Comparative mode** - ask "X vs Y" (e.g., `/last30 cursor vs windsurf`) and get 3 parallel research passes with a side-by-side comparison: strengths, weaknesses, head-to-head table, and a data-driven verdict.
+- **ScrapeCreators X backend** - X/Twitter search now uses ScrapeCreators as an additional backend alongside Bird cookie auth.
+- **Per-project .env config** - drop a `.last30days.env` in your project root for per-project API keys.
+- **SessionStart config check** - validates your config automatically when a Claude Code session starts.
+- **Expanded test coverage** - 455+ tests across all modules.
 
 **New in v2.9.1 — Auto-save to ~/Documents/Last30Days/:** Every run now saves the complete briefing as a topic-named `.md` file to your Documents folder. Build a personal research library automatically. Inspired by [@devin_explores](https://x.com/devin_explores).
 
@@ -28,7 +43,7 @@ Instagram Reels is now the 8th signal source. TikTok and Instagram both run on S
 
 **New in V2:** Smarter query construction, two-phase supplemental search, free X search via bundled Bird client, `--days=N` flag, automatic model fallback. [Full changelog below.](#whats-new-in-v2)
 
-**The tradeoff:** /last30days finds a lot of content but takes 2-8 minutes depending on how niche your topic is. Six sources searched in parallel, results scored, deduplicated, and synthesized. We think the depth is worth the wait, but `--quick` mode is there if you need speed over thoroughness.
+**The tradeoff:** /last30days finds a lot of content but takes 2-8 minutes depending on how niche your topic is. Up to 10 sources searched in parallel, results scored, deduplicated, and synthesized. We think the depth is worth the wait, but `--quick` mode is there if you need speed over thoroughness.
 
 **Best for prompt research**: discover what prompting techniques actually work for any tool (ChatGPT, Midjourney, Claude, Paper, etc.) by learning from real community discussions and best practices.
 
@@ -58,6 +73,8 @@ cat > ~/.config/last30days/.env << 'EOF'
 SCRAPECREATORS_API_KEY=... # Reddit + TikTok + Instagram (one key, all three) — scrapecreators.com
 OPENAI_API_KEY=sk-...      # optional — legacy Reddit fallback if using `codex login`
 XAI_API_KEY=xai-...        # optional — cookie auth is default for X search
+BSKY_HANDLE=you.bsky.social       # optional — Bluesky search (create app password below)
+BSKY_APP_PASSWORD=xxxx-xxxx-xxxx  # optional — bsky.app/settings/app-passwords
 EOF
 chmod 600 ~/.config/last30days/.env
 ```
@@ -136,6 +153,12 @@ BRAVE_API_KEY=...       # Brave Search (free tier: 2,000 queries/month)
 OPENROUTER_API_KEY=...  # OpenRouter/Perplexity Sonar Pro
 ```
 
+**Optional Bluesky credentials** (add to `~/.config/last30days/.env`):
+```bash
+BSKY_HANDLE=you.bsky.social       # Your Bluesky handle
+BSKY_APP_PASSWORD=xxxx-xxxx-xxxx  # Create at bsky.app/settings/app-passwords
+```
+
 Check source availability: `python3 scripts/last30days.py --diagnose`
 
 ## Usage
@@ -153,7 +176,7 @@ Examples:
 
 ## What It Does
 
-1. **Researches** - Scans Reddit, X, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web for discussions from the last 30 days
+1. **Researches** - Scans Reddit, X, Bluesky, YouTube, TikTok, Instagram, Hacker News, Polymarket, and the web for discussions from the last 30 days
 2. **Synthesizes** - Identifies patterns, best practices, and what actually works
 3. **Delivers** - Either writes copy-paste-ready prompts for your target tool, or gives you a curated expert-level answer
 

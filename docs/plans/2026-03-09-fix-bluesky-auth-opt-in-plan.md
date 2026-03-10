@@ -95,7 +95,7 @@ AT Protocol auth flow:
 - [x] SKILL.md documents the env vars
 - [x] All existing Bluesky tests still pass
 - [x] New auth tests added
-- [ ] `bash scripts/sync.sh` deploys successfully
+- [x] `bash scripts/sync.sh` deploys successfully
 
 ## Sources
 
