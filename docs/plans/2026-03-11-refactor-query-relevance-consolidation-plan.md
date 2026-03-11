@@ -1,16 +1,17 @@
 # Search Pipeline: Query & Relevance Consolidation
 
-## Strategy: Two-phase delivery
+## Strategy: Single upstream PR
 
-**Phase 1 — Upstream PR** (`refactor/query-relevance-consolidation` -> `mvanhorn/last30days-skill:main`)
-Pure refactors and bug fixes anyone would want. No behavior changes.
+**Branch**: `refactor/query-relevance-consolidation` -> `mvanhorn/last30days-skill:main`
+**PR**: https://github.com/mvanhorn/last30days-skill/pull/65
 
-**Phase 2 — Fork-only** (`feat/search-quality` on `j-sperling/last30days-skill`)
-Opinionated behavior changes: computed relevance scores, platform-specific query optimization, post-retrieval filtering.
+All changes (refactors + behavior improvements) combined into one upstream PR.
+Originally planned as two phases, but the search quality improvements are
+broadly useful, not opinionated — merged into a single contribution.
 
 ---
 
-## Phase 1: Upstream PR (refactors + bug fixes)
+## Refactors (commits 1-5)
 
 ### Step 1: New `query.py` — shared query utilities
 - Consolidate 7 duplicated `_extract_core_subject()` (bird_x, reddit, youtube_yt, tiktok, instagram, bluesky, scrapecreators_x) into one parameterized function
@@ -49,7 +50,7 @@ Opinionated behavior changes: computed relevance scores, platform-specific query
 
 ---
 
-## Phase 2: Fork-only (behavior changes)
+## Search quality improvements (commits 6-8)
 
 ### Step 4: Replace hardcoded relevance with computed scores
 - `bird_x.py:471` — `"relevance": 0.7` → `token_overlap_relevance(core_topic, text)`
@@ -72,6 +73,10 @@ Opinionated behavior changes: computed relevance scores, platform-specific query
 ### Commit order: 4 → 5 → 7
 
 ---
+
+## Status: COMPLETE
+
+All 8 commits pushed to `refactor/query-relevance-consolidation`. PR #65 updated.
 
 ## Verify
 
