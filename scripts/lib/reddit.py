@@ -48,7 +48,8 @@ DEPTH_CONFIG = {
     },
 }
 
-from .query import detect_query_type, extract_core_subject as _query_extract
+from .query import extract_core_subject as _query_extract
+from .query_type import detect_query_type
 from .relevance import token_overlap_relevance
 
 # Reddit-specific noise words (preserves original smaller set)

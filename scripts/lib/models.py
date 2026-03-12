@@ -53,6 +53,10 @@ def is_search_capable_model(model_id: str) -> bool:
     Includes mini variants (same structured extraction quality, lower cost).
     Excludes: nano (no web_search), gpt-4o-mini (no domain filtering),
     chat/codex/pro/preview/turbo/search (specialized variants).
+
+    Note: gpt-5 with reasoning effort="minimal" does NOT support web_search
+    (per OpenAI docs). We never set reasoning params — our usage is pure
+    tool invocation + JSON extraction — so gpt-5 is safe to include here.
     """
     model_lower = model_id.lower()
 

@@ -1,9 +1,5 @@
-"""Shared query utilities for /last30days search modules.
-
-Consolidates duplicated _extract_core_subject() logic from bird_x, reddit,
-youtube_yt, tiktok, instagram, bluesky, and scrapecreators_x into one
-parameterized function. Each platform calls with its own overrides.
-"""
+"""Shared query preprocessing utilities: noise-word stripping, core subject
+extraction, and compound term detection. Used by all search modules."""
 
 import re
 from typing import FrozenSet, List, Optional, Set
@@ -97,49 +93,6 @@ def extract_core_subject(
 
     result = ' '.join(filtered) if filtered else text
     return result.rstrip('?!.') if not max_words else (result or topic.lower().strip())
-
-
-# ---- Query type detection (heuristic, no LLM) ----
-
-_OPINION_SIGNALS = frozenset({
-    'worth', 'thoughts', 'opinion', 'opinions', 'review', 'reviews',
-    'recommend', 'recommendation', 'recommendations', 'should',
-    'anyone', 'anybody', 'experience', 'experiences',
-})
-
-_HOW_TO_SIGNALS = frozenset({
-    'how', 'setup', 'configure', 'install', 'tutorial', 'guide',
-    'step', 'steps', 'instructions',
-})
-
-_COMPARISON_SIGNALS = frozenset({
-    'vs', 'versus', 'compared', 'comparison', 'better', 'alternative',
-    'alternatives', 'difference', 'differences',
-})
-
-_PRODUCT_SIGNALS = frozenset({
-    'pricing', 'price', 'cost', 'plan', 'plans', 'tier', 'tiers',
-    'buy', 'purchase', 'subscription', 'trial', 'free',
-})
-
-
-def detect_query_type(topic: str) -> str:
-    """Classify query intent without an LLM.
-
-    Returns one of: "product", "concept", "opinion", "how_to", "comparison".
-    Used to adapt per-platform query construction.
-    """
-    words = set(topic.lower().split())
-
-    if words & _COMPARISON_SIGNALS:
-        return "comparison"
-    if words & _HOW_TO_SIGNALS or topic.lower().startswith("how "):
-        return "how_to"
-    if words & _OPINION_SIGNALS:
-        return "opinion"
-    if words & _PRODUCT_SIGNALS:
-        return "product"
-    return "concept"
 
 
 def extract_compound_terms(topic: str) -> List[str]:

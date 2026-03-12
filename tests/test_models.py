@@ -30,6 +30,12 @@ class TestParseVersion(unittest.TestCase):
 
 class TestIsSearchCapableModel(unittest.TestCase):
     def test_gpt5_is_capable(self):
+        """gpt-5 supports web_search when reasoning is not set to 'minimal'.
+
+        Per OpenAI docs, gpt-5 with reasoning effort="minimal" does NOT
+        support web_search. We never set reasoning params (our usage is
+        tool invocation + JSON extraction only), so gpt-5 is safe here.
+        """
         self.assertTrue(models.is_search_capable_model("gpt-5"))
 
     def test_gpt52_is_capable(self):

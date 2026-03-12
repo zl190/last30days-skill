@@ -1,7 +1,6 @@
-"""Shared relevance scoring for /last30days search modules.
+"""Shared token-overlap relevance scoring for search result ranking.
 
-Consolidates duplicated _tokenize, _compute_relevance, STOPWORDS, and SYNONYMS
-from youtube_yt, tiktok, instagram, and scrapecreators_x into one module.
+Tokenizes text, expands synonyms, and computes query-to-content overlap ratios.
 """
 
 import re

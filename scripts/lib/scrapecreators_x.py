@@ -24,12 +24,7 @@ DEPTH_CONFIG = {
     "deep":    {"results_per_page": 40},
 }
 
-from .relevance import (
-    STOPWORDS,
-    SYNONYMS,
-    token_overlap_relevance as _compute_relevance,
-    tokenize as _tokenize,
-)
+from .relevance import token_overlap_relevance as _compute_relevance
 
 
 def _extract_core_subject(topic: str) -> str:

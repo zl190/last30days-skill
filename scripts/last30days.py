@@ -1835,11 +1835,11 @@ def main():
         """Filter items below relevance threshold with minimum-result guarantee."""
         if len(items) <= 3:
             return items
-        passed = [i for i in items if getattr(i, 'relevance', 0.7) >= threshold]
+        passed = [i for i in items if getattr(i, 'relevance', 0.0) >= threshold]
         if not passed:
             # Keep top 3 by relevance if all filtered
             print(f"[{source_name} WARNING] All results below relevance {threshold}, keeping top 3", file=sys.stderr)
-            by_rel = sorted(items, key=lambda x: getattr(x, 'relevance', 0.7), reverse=True)
+            by_rel = sorted(items, key=lambda x: getattr(x, 'relevance', 0.0), reverse=True)
             return by_rel[:3]
         return passed
 

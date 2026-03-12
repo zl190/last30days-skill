@@ -35,12 +35,7 @@ TRANSCRIPT_LIMITS = {
 # Max words to keep from each transcript
 TRANSCRIPT_MAX_WORDS = 500
 
-from .relevance import (
-    STOPWORDS,
-    SYNONYMS,
-    token_overlap_relevance as _compute_relevance,
-    tokenize as _tokenize,
-)
+from .relevance import token_overlap_relevance as _compute_relevance
 
 
 def _log(msg: str):
@@ -100,16 +95,15 @@ def search_youtube(
     _log(f"Searching YouTube for '{core_topic}' (since {from_date}, count={count})")
 
     # yt-dlp search with full metadata (no --flat-playlist so dates are real).
-    # --dateafter helps yt-dlp filter server-side, but Python soft filter
-    # (below) handles the fallback for evergreen topics with 0 recent results.
-    dateafter = from_date.replace("-", "")  # YYYYMMDD format for yt-dlp
+    # NOTE: --dateafter intentionally omitted — YouTube search returns
+    # relevance-sorted results and strict date filtering returns 0 for
+    # evergreen topics. Python soft filter (below) handles date filtering.
     cmd = [
         "yt-dlp",
         f"ytsearch{count}:{core_topic}",
         "--dump-json",
         "--no-warnings",
         "--no-download",
-        "--dateafter", dateafter,
     ]
 
     preexec = os.setsid if hasattr(os, 'setsid') else None

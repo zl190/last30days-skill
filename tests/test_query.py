@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from lib.query import NOISE_WORDS, detect_query_type, extract_compound_terms, extract_core_subject
+from lib.query import NOISE_WORDS, extract_compound_terms, extract_core_subject
 
 
 class TestExtractCoreSubject(unittest.TestCase):
@@ -125,27 +125,6 @@ class TestNoiseWordsCompleteness(unittest.TestCase):
         for w in ('best', 'top', 'latest', 'trending', 'popular'):
             self.assertIn(w, NOISE_WORDS)
 
-
-class TestDetectQueryType(unittest.TestCase):
-    """Tests for detect_query_type()."""
-
-    def test_comparison(self):
-        self.assertEqual(detect_query_type("React vs Vue"), "comparison")
-
-    def test_how_to(self):
-        self.assertEqual(detect_query_type("how to deploy on Vercel"), "how_to")
-
-    def test_opinion(self):
-        self.assertEqual(detect_query_type("cursor IDE worth it"), "opinion")
-
-    def test_product(self):
-        self.assertEqual(detect_query_type("cursor IDE pricing"), "product")
-
-    def test_concept_default(self):
-        self.assertEqual(detect_query_type("multi-agent reinforcement learning"), "concept")
-
-    def test_how_prefix(self):
-        self.assertEqual(detect_query_type("how does Claude work"), "how_to")
 
 
 class TestExtractCompoundTerms(unittest.TestCase):

@@ -7,7 +7,7 @@ from pathlib import Path
 # Add lib to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from lib.youtube_yt import _compute_relevance, _tokenize
+from lib.relevance import token_overlap_relevance as _compute_relevance, tokenize as _tokenize
 
 
 class TestTokenize(unittest.TestCase):

@@ -58,7 +58,7 @@ def _extract_core_subject(topic: str) -> str:
     Aggressively strip question/meta/research words to keep only the
     core product/concept name (max 5 words).
     """
-    from .query import NOISE_WORDS, extract_core_subject
+    from .query import extract_core_subject
     return extract_core_subject(topic, max_words=5, strip_suffixes=True)
 
 
