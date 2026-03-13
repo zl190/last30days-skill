@@ -82,6 +82,21 @@ class TestBirdAuthEnvironment(unittest.TestCase):
         self.assertEqual(result, "env AUTH_TOKEN")
         run_mock.assert_not_called()
 
+    def test_search_handles_passes_injected_credentials_to_subprocess(self):
+        bird_x.set_credentials("auth-token", "ct0-token")
+
+        proc = mock.Mock()
+        proc.communicate.return_value = ("[]", "")
+        proc.returncode = 0
+
+        with mock.patch.object(bird_x.subprocess, "Popen", return_value=proc) as popen_mock:
+            bird_x.search_handles(["openai"], "codex vs claude code", "2026-01-01", count_per=1)
+
+        env = popen_mock.call_args.kwargs["env"]
+        self.assertEqual(env["AUTH_TOKEN"], "auth-token")
+        self.assertEqual(env["CT0"], "ct0-token")
+        self.assertEqual(env["BIRD_DISABLE_BROWSER_COOKIES"], "1")
+
 
 if __name__ == "__main__":
     unittest.main()
