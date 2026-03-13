@@ -176,6 +176,8 @@ def search_youtube(
     # filtering returns 0 for evergreen topics like "thumbnail tips".
     cmd = [
         "yt-dlp",
+        "--ignore-config",
+        "--no-cookies-from-browser",
         f"ytsearch{count}:{core_topic}",
         "--dump-json",
         "--no-warnings",
@@ -295,6 +297,8 @@ def fetch_transcript(video_id: str, temp_dir: str) -> Optional[str]:
     """
     cmd = [
         "yt-dlp",
+        "--ignore-config",
+        "--no-cookies-from-browser",
         "--write-auto-subs",
         "--sub-lang", "en",
         "--sub-format", "vtt",

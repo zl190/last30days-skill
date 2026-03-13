@@ -11,6 +11,9 @@ from lib import bird_x
 
 
 class TestExtractCoreSubject(unittest.TestCase):
+    def tearDown(self):
+        bird_x._credentials.clear()
+
     def test_strips_trending_noise(self):
         result = bird_x._extract_core_subject("trendiest Claude Code skills")
         self.assertNotIn("trendiest", result)
@@ -28,6 +31,9 @@ class TestExtractCoreSubject(unittest.TestCase):
 
 
 class TestBirdSearchRetries(unittest.TestCase):
+    def tearDown(self):
+        bird_x._credentials.clear()
+
     def test_last_chance_retry_uses_strongest_token(self):
         """When shorter retry also returns 0, uses longest non-noise token."""
         empty = {"items": []}
@@ -51,6 +57,30 @@ class TestBirdSearchRetries(unittest.TestCase):
             bird_x.search_x("nano banana prompting", "2026-01-01", "2026-01-31")
 
         self.assertEqual(run_mock.call_count, 1)
+
+
+class TestBirdAuthEnvironment(unittest.TestCase):
+    def tearDown(self):
+        bird_x._credentials.clear()
+
+    def test_subprocess_env_disables_browser_cookie_fallback_when_injected(self):
+        bird_x.set_credentials("auth-token", "ct0-token")
+
+        env = bird_x._subprocess_env()
+
+        self.assertEqual(env["AUTH_TOKEN"], "auth-token")
+        self.assertEqual(env["CT0"], "ct0-token")
+        self.assertEqual(env["BIRD_DISABLE_BROWSER_COOKIES"], "1")
+
+    def test_is_bird_authenticated_short_circuits_when_credentials_injected(self):
+        bird_x.set_credentials("auth-token", "ct0-token")
+
+        with mock.patch.object(bird_x, "is_bird_installed", return_value=True), \
+             mock.patch.object(bird_x.subprocess, "run") as run_mock:
+            result = bird_x.is_bird_authenticated()
+
+        self.assertEqual(result, "env AUTH_TOKEN")
+        run_mock.assert_not_called()
 
 
 if __name__ == "__main__":
