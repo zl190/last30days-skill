@@ -1838,6 +1838,7 @@ def main():
     deduped_hn = score.relevance_filter(deduped_hn, "HN")
     deduped_bsky = score.relevance_filter(deduped_bsky, "BLUESKY")
     deduped_ts = score.relevance_filter(deduped_ts, "TRUTHSOCIAL")
+    deduped_pm = score.relevance_filter(deduped_pm, "POLYMARKET") if deduped_pm else []
 
     # Cross-source linking: annotate items that discuss the same story
     dedupe.cross_source_link(

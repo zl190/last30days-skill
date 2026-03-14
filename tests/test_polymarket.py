@@ -569,8 +569,9 @@ class TestTextSimilarity(unittest.TestCase):
 
     def test_partial_token_overlap(self):
         score = polymarket._compute_text_similarity("Arizona Basketball", "Will Arizona win?")
-        # "Arizona" matches, "Basketball" doesn't -> 0.5
-        self.assertAlmostEqual(score, 0.5)
+        # Partial informative match should stay below exact match.
+        self.assertGreater(score, 0.3)
+        self.assertLess(score, 0.6)
 
     def test_no_overlap(self):
         score = polymarket._compute_text_similarity("Arizona Basketball", "Will AI regulation pass?")
@@ -595,7 +596,7 @@ class TestTextSimilarity(unittest.TestCase):
             "Who will be the #1 overall seed?",
             outcomes=["Duke", "Arizona", "Houston"],
         )
-        self.assertEqual(score, 0.85)
+        self.assertEqual(score, 1.0)
 
     def test_outcome_bidirectional_match(self):
         """Topic 'Arizona Basketball' should match outcome 'Arizona' (outcome in core)."""
@@ -604,16 +605,17 @@ class TestTextSimilarity(unittest.TestCase):
             "Who will be the #1 overall seed?",
             outcomes=["Duke", "Arizona", "Houston"],
         )
-        self.assertEqual(score, 0.85)
+        self.assertEqual(score, 0.88)
 
     def test_outcome_token_overlap(self):
-        """Partial token overlap with outcome gets 0.7 when no substring match."""
+        """Partial token overlap with outcome gets a moderate score."""
         score = polymarket._compute_text_similarity(
             "Iran War",
             "Unrelated geopolitics title",
             outcomes=["War continues", "Peace deal"],
         )
-        self.assertEqual(score, 0.7)
+        self.assertGreater(score, 0.3)
+        self.assertLess(score, 0.6)
 
     def test_outcome_no_match(self):
         """No outcome match falls through to title token overlap."""
@@ -632,7 +634,15 @@ class TestTextSimilarity(unittest.TestCase):
             "Unrelated title",
             outcomes=["Arizona"],
         )
-        self.assertEqual(score, 0.85)
+        self.assertEqual(score, 1.0)
+
+    def test_generic_only_odds_match_stays_below_threshold(self):
+        score = polymarket._compute_text_similarity(
+            "Anthropic odds",
+            "Republican 2026 House odds",
+            outcomes=["Yes", "No"],
+        )
+        self.assertLess(score, 0.3)
 
     def test_title_match_still_beats_outcome(self):
         """Title substring match (1.0) takes priority over outcome match (0.85)."""

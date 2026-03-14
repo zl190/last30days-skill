@@ -1,6 +1,9 @@
 """Shared token-overlap relevance scoring for search result ranking.
 
-Tokenizes text, expands synonyms, and computes query-to-content overlap ratios.
+The score is intentionally query-centric:
+- exact phrase matches should score very high
+- partial matches should pay a meaningful penalty
+- matches on generic words alone ("odds", "review") should not pass as relevant
 """
 
 import re
@@ -36,6 +39,18 @@ SYNONYMS = {
     'vuejs': {'vue'},
 }
 
+# Generic query words that should not carry relevance on their own.
+# They still help when paired with stronger entity/topic matches.
+LOW_SIGNAL_QUERY_TOKENS = frozenset({
+    'advice', 'animation', 'animations', 'best', 'chance', 'chances',
+    'code', 'compare', 'comparison', 'differences', 'explain', 'guide',
+    'guides', 'how', 'latest', 'news', 'odds', 'opinion', 'opinions',
+    'prediction', 'predictions', 'probability', 'probabilities', 'prompt',
+    'prompting', 'prompts', 'rate', 'review', 'reviews', 'thoughts',
+    'tip', 'tips', 'tutorial', 'tutorials', 'update', 'updates', 'use',
+    'using', 'versus', 'vs', 'worth',
+})
+
 
 def tokenize(text: str) -> Set[str]:
     """Lowercase, strip punctuation, remove stopwords, drop single-char tokens.
@@ -51,15 +66,25 @@ def tokenize(text: str) -> Set[str]:
     return expanded
 
 
+def _normalize_phrase(text: str) -> str:
+    """Normalize text for phrase containment checks."""
+    return ' '.join(re.sub(r'[^\w\s]', ' ', text.lower()).split())
+
+
 def token_overlap_relevance(
     query: str,
     text: str,
     hashtags: Optional[List[str]] = None,
 ) -> float:
-    """Compute relevance as ratio of query tokens found in text.
+    """Compute a query-centric relevance score between 0.0 and 1.0.
 
-    Uses ratio overlap (intersection / query_length) so short queries
-    score higher when fully represented in the text. Floors at 0.1.
+    The score combines:
+    - query coverage
+    - informative-token coverage
+    - a small precision term to penalize extra noise
+    - an exact phrase bonus
+
+    Generic tokens alone are capped below the post-retrieval 0.3 threshold.
 
     Args:
         query: Search query
@@ -68,7 +93,7 @@ def token_overlap_relevance(
             hashtags are split to match query tokens (e.g. "claudecode" matches "claude").
 
     Returns:
-        Float between 0.1 and 1.0 (0.5 for empty queries)
+        Float between 0.0 and 1.0 (0.5 for empty queries)
     """
     q_tokens = tokenize(query)
 
@@ -89,6 +114,35 @@ def token_overlap_relevance(
     if not q_tokens:
         return 0.5  # Neutral fallback for empty/stopword-only queries
 
-    overlap = len(q_tokens & t_tokens)
-    ratio = overlap / len(q_tokens)
-    return max(0.1, min(1.0, ratio))
+    overlap_tokens = q_tokens & t_tokens
+    overlap = len(overlap_tokens)
+    if overlap == 0:
+        return 0.0
+
+    informative_q_tokens = {t for t in q_tokens if t not in LOW_SIGNAL_QUERY_TOKENS}
+    if not informative_q_tokens:
+        informative_q_tokens = q_tokens
+
+    coverage = overlap / len(q_tokens)
+    informative_overlap = len(informative_q_tokens & t_tokens) / len(informative_q_tokens)
+    precision_denominator = min(len(t_tokens), len(q_tokens) + 4) or 1
+    precision = overlap / precision_denominator
+
+    phrase_bonus = 0.0
+    normalized_query = _normalize_phrase(query)
+    normalized_text = _normalize_phrase(combined)
+    if normalized_query and normalized_query in normalized_text:
+        phrase_bonus = 0.12 if len(normalized_query.split()) > 1 else 0.16
+
+    base = (
+        0.55 * (coverage ** 1.35) +
+        0.25 * informative_overlap +
+        0.20 * precision
+    )
+
+    # If we only matched generic query words, keep the score below the
+    # normal relevance filter threshold so these do not survive by default.
+    if informative_q_tokens and not (informative_q_tokens & t_tokens):
+        return round(min(0.24, base), 2)
+
+    return round(min(1.0, base + phrase_bonus), 2)

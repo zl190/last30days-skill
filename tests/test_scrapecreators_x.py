@@ -44,9 +44,9 @@ class TestComputeRelevance(unittest.TestCase):
         score = scrapecreators_x._compute_relevance("", "some text")
         self.assertEqual(score, 0.5)
 
-    def test_floor_at_01(self):
+    def test_no_match_returns_zero(self):
         score = scrapecreators_x._compute_relevance("abcdef ghijkl", "xyz")
-        self.assertGreaterEqual(score, 0.1)
+        self.assertEqual(score, 0.0)
 
 
 class TestExtractCoreSubject(unittest.TestCase):

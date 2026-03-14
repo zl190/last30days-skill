@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import quote_plus, urlencode
 
 from . import http
+from .relevance import token_overlap_relevance
 
 GAMMA_SEARCH_URL = "https://gamma-api.polymarket.com/public-search"
 
@@ -314,8 +315,8 @@ def _shorten_question(question: str) -> str:
 def _compute_text_similarity(topic: str, title: str, outcomes: List[str] = None) -> float:
     """Score how well the event title (or outcome names) match the search topic.
 
-    Returns 0.0-1.0. Title substring match gets 1.0, outcome match gets 0.85/0.7,
-    title token overlap gets proportional score.
+    Returns 0.0-1.0. Exact title phrase match gets 1.0. Otherwise we reuse the
+    shared query-centric relevance scorer and take the best title/outcome match.
     """
     core = _extract_core_subject(topic).lower()
     title_lower = title.lower()
@@ -326,27 +327,17 @@ def _compute_text_similarity(topic: str, title: str, outcomes: List[str] = None)
     if core in title_lower:
         return 1.0
 
-    # Check if topic appears in any outcome name (bidirectional)
+    best_score = token_overlap_relevance(core, title)
+
     if outcomes:
-        core_tokens = set(core.split())
-        best_outcome_score = 0.0
         for outcome_name in outcomes:
             outcome_lower = outcome_name.lower()
-            # Bidirectional: "arizona" in "arizona basketball" OR "arizona basketball" contains "arizona"
+            outcome_score = token_overlap_relevance(core, outcome_name)
             if core in outcome_lower or outcome_lower in core:
-                best_outcome_score = max(best_outcome_score, 0.85)
-            elif core_tokens & set(outcome_lower.split()):
-                best_outcome_score = max(best_outcome_score, 0.7)
-        if best_outcome_score > 0:
-            return best_outcome_score
+                outcome_score = max(outcome_score, 0.92 if len(outcome_lower.split()) >= 2 else 0.88)
+            best_score = max(best_score, outcome_score)
 
-    # Token overlap fallback against title
-    topic_tokens = set(core.split())
-    title_tokens = set(title_lower.split())
-    if not topic_tokens:
-        return 0.5
-    overlap = len(topic_tokens & title_tokens)
-    return overlap / len(topic_tokens)
+    return round(best_score, 2)
 
 
 def _safe_float(val, default=0.0) -> float:
@@ -484,7 +475,8 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
             except (IndexError, TypeError):
                 end_date = None
 
-        # Quality-signal relevance (replaces position-based decay)
+        # Semantic relevance should dominate. Market quality should refine
+        # relevant matches, not rescue unrelated high-liquidity events.
         text_score = _compute_text_similarity(topic, title, all_outcome_names) if topic else 0.5
 
         # Volume signal: log-scaled monthly volume (most stable signal)
@@ -504,13 +496,13 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
         # Competitive bonus: markets near 50/50 are more interesting
         competitive_score = event_competitive
 
-        relevance = min(1.0, (
-            0.30 * text_score +
-            0.30 * vol_score +
-            0.15 * liq_score +
+        market_quality = (
+            0.50 * vol_score +
+            0.25 * liq_score +
             0.15 * movement_score +
             0.10 * competitive_score
-        ))
+        )
+        relevance = min(1.0, text_score * (0.75 + 0.25 * market_quality))
 
         # Surface the topic-matching outcome to the front before truncating
         if topic and outcome_prices:

@@ -75,7 +75,7 @@ class TestTokenOverlapRelevance(unittest.TestCase):
 
     def test_floor_at_0_1(self):
         rel = token_overlap_relevance("quantum physics", "cat dancing video")
-        self.assertGreaterEqual(rel, 0.1)
+        self.assertEqual(rel, 0.0)
 
     def test_full_match_returns_1(self):
         rel = token_overlap_relevance("python tutorial", "Python Tutorial for Beginners")
@@ -95,6 +95,15 @@ class TestTokenOverlapRelevance(unittest.TestCase):
     def test_stopword_only_query(self):
         rel = token_overlap_relevance("the a is", "some content here")
         self.assertEqual(rel, 0.5)
+
+    def test_generic_only_overlap_stays_below_filter_threshold(self):
+        rel = token_overlap_relevance("anthropic odds", "Republican house odds update")
+        self.assertLess(rel, 0.3)
+
+    def test_informative_partial_match_stays_above_generic_only(self):
+        generic_only = token_overlap_relevance("anthropic odds", "Republican house odds update")
+        informative = token_overlap_relevance("anthropic odds", "Anthropic valuation market")
+        self.assertGreater(informative, generic_only)
 
 
 class TestHashtagRelevance(unittest.TestCase):

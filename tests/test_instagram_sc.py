@@ -57,9 +57,9 @@ class TestComputeRelevance(unittest.TestCase):
         boosted = instagram._compute_relevance("claude code", "random video about stuff", ["claudecode", "ai"])
         self.assertGreater(boosted, base)
 
-    def test_floor_at_01(self):
+    def test_no_match_returns_zero(self):
         rel = instagram._compute_relevance("quantum physics", "cat dancing video")
-        self.assertGreaterEqual(rel, 0.1)
+        self.assertEqual(rel, 0.0)
 
     def test_empty_query_returns_default(self):
         rel = instagram._compute_relevance("", "Some video title")

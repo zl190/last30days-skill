@@ -108,12 +108,14 @@ def expand_reddit_queries(topic: str, depth: str) -> List[str]:
     if core.lower() != original_clean.lower() and len(original_clean.split()) <= 8:
         queries.append(original_clean)
 
-    # Add opinion/review variant except for how_to/comparison queries
+    # Opinion/review variants help mostly for product and opinion queries.
+    # They contaminate broader searches like predictions or breaking news.
     qtype = detect_query_type(topic)
-    if depth in ("default", "deep") and qtype not in ("how_to", "comparison"):
+    if depth in ("default", "deep") and qtype in ("product", "opinion"):
         queries.append(f"{core} worth it OR thoughts OR review")
 
-    if depth == "deep":
+    # Problem/bug variants are useful for tool workflows, not generic news.
+    if depth == "deep" and qtype in ("product", "opinion", "how_to"):
         queries.append(f"{core} issues OR problems OR bug OR broken")
 
     return queries

@@ -11,6 +11,12 @@ WEIGHT_RELEVANCE = 0.45
 WEIGHT_RECENCY = 0.25
 WEIGHT_ENGAGEMENT = 0.30
 
+# Polymarket needs stronger semantic weighting because volume/liquidity already
+# show up as engagement and lightly influence parse-time relevance.
+PM_WEIGHT_RELEVANCE = 0.60
+PM_WEIGHT_RECENCY = 0.20
+PM_WEIGHT_ENGAGEMENT = 0.20
+
 # WebSearch weights (no engagement data available)
 WEBSEARCH_WEIGHT_RELEVANCE = 0.55
 WEBSEARCH_WEIGHT_RECENCY = 0.45
@@ -632,9 +638,9 @@ def score_polymarket_items(items: List[schema.PolymarketItem]) -> List[schema.Po
         )
 
         overall = (
-            WEIGHT_RELEVANCE * rel_score +
-            WEIGHT_RECENCY * rec_score +
-            WEIGHT_ENGAGEMENT * eng_score
+            PM_WEIGHT_RELEVANCE * rel_score +
+            PM_WEIGHT_RECENCY * rec_score +
+            PM_WEIGHT_ENGAGEMENT * eng_score
         )
 
         if eng_raw[i] is None:

@@ -47,16 +47,28 @@ class TestExpandRedditQueries(unittest.TestCase):
         self.assertGreaterEqual(len(queries), 1)
 
     def test_default_includes_review_variant(self):
-        queries = reddit.expand_reddit_queries("cursor IDE", "default")
+        queries = reddit.expand_reddit_queries("cursor IDE pricing", "default")
         self.assertTrue(any("worth it" in q or "review" in q for q in queries))
 
+    def test_default_skips_review_variant_for_prediction(self):
+        queries = reddit.expand_reddit_queries("anthropic odds", "default")
+        self.assertFalse(any("worth it" in q or "review" in q for q in queries))
+
+    def test_default_skips_review_variant_for_breaking_news(self):
+        queries = reddit.expand_reddit_queries("kanye west", "default")
+        self.assertFalse(any("worth it" in q or "review" in q for q in queries))
+
     def test_deep_includes_issues_variant(self):
-        queries = reddit.expand_reddit_queries("cursor IDE", "deep")
+        queries = reddit.expand_reddit_queries("cursor IDE pricing", "deep")
         self.assertTrue(any("issues" in q or "problems" in q for q in queries))
 
+    def test_deep_skips_issues_variant_for_prediction(self):
+        queries = reddit.expand_reddit_queries("anthropic odds", "deep")
+        self.assertFalse(any("issues" in q or "problems" in q for q in queries))
+
     def test_deep_has_more_queries_than_quick(self):
-        quick = reddit.expand_reddit_queries("cursor IDE", "quick")
-        deep = reddit.expand_reddit_queries("cursor IDE", "deep")
+        quick = reddit.expand_reddit_queries("cursor IDE pricing", "quick")
+        deep = reddit.expand_reddit_queries("cursor IDE pricing", "deep")
         self.assertGreater(len(deep), len(quick))
 
 
