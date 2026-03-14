@@ -20,6 +20,7 @@ class TestDetectQueryType(unittest.TestCase):
         self.assertEqual(detect_query_type("cursor IDE pricing"), "product")
         self.assertEqual(detect_query_type("is Claude Pro worth the cost"), "product")
         self.assertEqual(detect_query_type("best free tier LLM API"), "product")
+        self.assertEqual(detect_query_type("nano banana pro prompting"), "product")
 
     def test_concept_queries(self):
         self.assertEqual(detect_query_type("what is WebTransport"), "concept")
@@ -35,6 +36,7 @@ class TestDetectQueryType(unittest.TestCase):
         self.assertEqual(detect_query_type("how to deploy on Vercel"), "how_to")
         self.assertEqual(detect_query_type("tutorial for building MCP servers"), "how_to")
         self.assertEqual(detect_query_type("step by step Kubernetes setup"), "how_to")
+        self.assertEqual(detect_query_type("remotion animations for Claude Code"), "how_to")
 
     def test_comparison_queries(self):
         self.assertEqual(detect_query_type("cursor vs windsurf"), "comparison")
