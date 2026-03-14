@@ -160,6 +160,7 @@ from lib import (
     websearch,
     xai_x,
     youtube_yt,
+    query_type as qt,
 )
 
 
@@ -631,8 +632,10 @@ def _search_web(
                 topic, from_date, to_date, config["PARALLEL_API_KEY"], depth=depth,
             )
         elif backend == "brave":
+            use_llm_ctx = os.environ.get("BRAVE_LLM_CONTEXT", "").strip() == "1"
             raw_results = brave_search.search_web(
-                topic, from_date, to_date, config["BRAVE_API_KEY"], depth=depth,
+                topic, from_date, to_date, config["BRAVE_API_KEY"],
+                depth=depth, use_llm_context=use_llm_ctx,
             )
         elif backend == "openrouter":
             raw_results = openrouter_search.search_web(
@@ -1692,14 +1695,19 @@ def main():
     else:
         mode = sources
 
+    # Detect query type for source tiering and scoring adjustments
+    query_type = qt.detect_query_type(args.topic)
+
     # Apply --search flag: restrict sources to the specified subset
-    search_do_hackernews = True
-    search_do_bluesky = has_bluesky
-    search_do_truthsocial = has_truthsocial
-    search_do_polymarket = True
-    search_run_youtube = has_ytdlp
-    search_run_tiktok = has_tiktok
-    search_run_instagram = has_instagram
+    # Source defaults are query-type-aware (Truth Social always opt-in,
+    # Bluesky only for query types where it adds signal)
+    search_do_hackernews = qt.is_source_enabled("hn", query_type) if not args.search else True
+    search_do_bluesky = has_bluesky and qt.is_source_enabled("bluesky", query_type)
+    search_do_truthsocial = False  # Always opt-in (requires --search truthsocial)
+    search_do_polymarket = qt.is_source_enabled("polymarket", query_type)
+    search_run_youtube = has_ytdlp and qt.is_source_enabled("youtube", query_type)
+    search_run_tiktok = has_tiktok and qt.is_source_enabled("tiktok", query_type)
+    search_run_instagram = has_instagram and qt.is_source_enabled("instagram", query_type)
     search_run_xiaohongshu = has_xiaohongshu
     if args.search:
         search_sources = parse_search_flag(args.search)
@@ -1795,19 +1803,19 @@ def main():
     scored_bsky = score.score_bluesky_items(filtered_bsky) if filtered_bsky else []
     scored_ts = score.score_truthsocial_items(filtered_ts) if filtered_ts else []
     scored_pm = score.score_polymarket_items(filtered_pm) if filtered_pm else []
-    scored_web = score.score_websearch_items(filtered_web) if filtered_web else []
+    scored_web = score.score_websearch_items(filtered_web, query_type=query_type) if filtered_web else []
 
-    # Sort items
-    sorted_reddit = score.sort_items(scored_reddit)
-    sorted_x = score.sort_items(scored_x)
-    sorted_youtube = score.sort_items(scored_youtube) if scored_youtube else []
-    sorted_tiktok = score.sort_items(scored_tiktok) if scored_tiktok else []
-    sorted_ig = score.sort_items(scored_ig) if scored_ig else []
-    sorted_hn = score.sort_items(scored_hn) if scored_hn else []
-    sorted_bsky = score.sort_items(scored_bsky) if scored_bsky else []
-    sorted_ts = score.sort_items(scored_ts) if scored_ts else []
-    sorted_pm = score.sort_items(scored_pm) if scored_pm else []
-    sorted_web = score.sort_items(scored_web) if scored_web else []
+    # Sort items (query-type-aware tiebreaker ordering)
+    sorted_reddit = score.sort_items(scored_reddit, query_type=query_type)
+    sorted_x = score.sort_items(scored_x, query_type=query_type)
+    sorted_youtube = score.sort_items(scored_youtube, query_type=query_type) if scored_youtube else []
+    sorted_tiktok = score.sort_items(scored_tiktok, query_type=query_type) if scored_tiktok else []
+    sorted_ig = score.sort_items(scored_ig, query_type=query_type) if scored_ig else []
+    sorted_hn = score.sort_items(scored_hn, query_type=query_type) if scored_hn else []
+    sorted_bsky = score.sort_items(scored_bsky, query_type=query_type) if scored_bsky else []
+    sorted_ts = score.sort_items(scored_ts, query_type=query_type) if scored_ts else []
+    sorted_pm = score.sort_items(scored_pm, query_type=query_type) if scored_pm else []
+    sorted_web = score.sort_items(scored_web, query_type=query_type) if scored_web else []
 
     # Dedupe items
     deduped_reddit = dedupe.dedupe_reddit(sorted_reddit)
