@@ -30,6 +30,12 @@ class TestParseVersion(unittest.TestCase):
 
 class TestIsSearchCapableModel(unittest.TestCase):
     def test_gpt5_is_capable(self):
+        """gpt-5 supports web_search when reasoning is not set to 'minimal'.
+
+        Per OpenAI docs, gpt-5 with reasoning effort="minimal" does NOT
+        support web_search. We never set reasoning params (our usage is
+        tool invocation + JSON extraction only), so gpt-5 is safe here.
+        """
         self.assertTrue(models.is_search_capable_model("gpt-5"))
 
     def test_gpt52_is_capable(self):
@@ -132,6 +138,27 @@ class TestSelectOpenAIModel(unittest.TestCase):
             mock_models=mock_models
         )
         self.assertEqual(result, "gpt-4.1-mini")
+
+
+class TestSelectOpenAIModelErrorPaths(unittest.TestCase):
+    def setUp(self):
+        from lib import cache
+        cache.MODEL_CACHE_FILE.unlink(missing_ok=True)
+
+    def test_http_error_returns_fallback(self):
+        """HTTPError during model fetch should return fallback, not crash."""
+        from unittest.mock import patch
+        from lib import http
+        with patch('lib.http.get', side_effect=http.HTTPError("Unauthorized", status_code=401)):
+            result = models.select_openai_model("bad-key", policy="auto")
+        self.assertEqual(result, models.OPENAI_FALLBACK_MODELS[0])
+
+    def test_http_403_returns_fallback(self):
+        from unittest.mock import patch
+        from lib import http
+        with patch('lib.http.get', side_effect=http.HTTPError("Forbidden", status_code=403)):
+            result = models.select_openai_model("bad-key", policy="auto")
+        self.assertEqual(result, models.OPENAI_FALLBACK_MODELS[0])
 
 
 class TestSelectXAIModel(unittest.TestCase):

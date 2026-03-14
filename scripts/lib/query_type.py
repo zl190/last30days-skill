@@ -7,7 +7,7 @@ QueryType = Literal["product", "concept", "opinion", "how_to", "comparison", "br
 
 # Pattern-based classification (no LLM, no external deps)
 _PRODUCT_PATTERNS = re.compile(
-    r"\b(price|pricing|cost|buy|purchase|deal|discount|subscription|plan|tier|free tier|alternative)\b", re.I
+    r"\b(price|pricing|cost|buy|purchase|deal|discount|subscription|plan|tier|free tier|alternative|prompt|prompts|prompting|template|templates)\b", re.I
 )
 _CONCEPT_PATTERNS = re.compile(
     r"\b(what is|what are|explain|definition|how does|how do|overview|introduction|guide to|primer)\b", re.I
@@ -16,7 +16,7 @@ _OPINION_PATTERNS = re.compile(
     r"\b(worth it|thoughts on|opinion|review|experience with|recommend|should i|pros and cons|good or bad)\b", re.I
 )
 _HOWTO_PATTERNS = re.compile(
-    r"\b(how to|tutorial|step by step|setup|install|configure|deploy|migrate|implement|build a|create a|prompting|prompts?|best practices|tips|examples|animation|animations)\b",
+    r"\b(how to|tutorial|step by step|setup|install|configure|deploy|migrate|implement|build a|create a|prompting|prompts?|best practices|tips|examples|animation|animations|video workflow|render pipeline)\b",
     re.I,
 )
 _COMPARISON_PATTERNS = re.compile(

@@ -353,7 +353,7 @@ def _search_x(
             raw_response = {"error": str(e)}
             x_error = f"{type(e).__name__}: {e}"
 
-        x_items = bird_x.parse_bird_response(raw_response or {})
+        x_items = bird_x.parse_bird_response(raw_response or {}, query=topic)
 
         # Check for error in response (Bird returns list on success, dict on error)
         if raw_response and isinstance(raw_response, dict) and raw_response.get("error") and not x_error:
@@ -508,7 +508,7 @@ def _search_hackernews(
     except Exception as e:
         return [], f"{type(e).__name__}: {e}"
 
-    hn_items = hackernews.parse_hackernews_response(response)
+    hn_items = hackernews.parse_hackernews_response(response, query=topic)
 
     if response.get("error"):
         hn_error = response["error"]
@@ -1829,12 +1829,16 @@ def main():
     deduped_pm = dedupe.dedupe_polymarket(sorted_pm) if sorted_pm else []
     deduped_web = websearch.dedupe_websearch(sorted_web) if sorted_web else []
 
-    # Minimum result guarantee: if all Reddit results were filtered out but
-    # we had raw results, keep top 3 by relevance regardless of score
-    if not deduped_reddit and normalized_reddit:
-        print("[REDDIT WARNING] All results scored below threshold, keeping top 3 by relevance", file=sys.stderr)
-        by_relevance = sorted(normalized_reddit, key=lambda item: item.relevance, reverse=True)
-        deduped_reddit = by_relevance[:3]
+    # Post-retrieval relevance filter: drop low-relevance items per source
+    deduped_reddit = score.relevance_filter(deduped_reddit, "REDDIT")
+    deduped_x = score.relevance_filter(deduped_x, "X")
+    deduped_youtube = score.relevance_filter(deduped_youtube, "YOUTUBE")
+    deduped_tiktok = score.relevance_filter(deduped_tiktok, "TIKTOK")
+    deduped_ig = score.relevance_filter(deduped_ig, "INSTAGRAM")
+    deduped_hn = score.relevance_filter(deduped_hn, "HN")
+    deduped_bsky = score.relevance_filter(deduped_bsky, "BLUESKY")
+    deduped_ts = score.relevance_filter(deduped_ts, "TRUTHSOCIAL")
+    deduped_pm = score.relevance_filter(deduped_pm, "POLYMARKET") if deduped_pm else []
 
     # Cross-source linking: annotate items that discuss the same story
     dedupe.cross_source_link(
