@@ -36,10 +36,19 @@ def set_credentials(auth_token: Optional[str], ct0: Optional[str]):
         _credentials['CT0'] = ct0
 
 
+def _has_injected_credentials() -> bool:
+    """Return True when both X session cookies were injected from config."""
+    return bool(_credentials.get('AUTH_TOKEN') and _credentials.get('CT0'))
+
+
 def _subprocess_env() -> Dict[str, str]:
     """Build env dict for Node subprocesses, merging injected credentials."""
     env = os.environ.copy()
     env.update(_credentials)
+    # When repo config already provides cookies, disable browser-cookie fallback
+    # so vendored Bird never hits Safari/Chrome keychain during automation.
+    if _has_injected_credentials():
+        env.setdefault("BIRD_DISABLE_BROWSER_COOKIES", "1")
     return env
 
 
@@ -125,6 +134,9 @@ def is_bird_authenticated() -> Optional[str]:
     """
     if not is_bird_installed():
         return None
+
+    if _has_injected_credentials():
+        return "env AUTH_TOKEN"
 
     try:
         result = subprocess.run(
@@ -353,6 +365,7 @@ def search_handles(
                 stderr=subprocess.PIPE,
                 text=True,
                 preexec_fn=preexec,
+                env=_subprocess_env(),
             )
 
             try:
