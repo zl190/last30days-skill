@@ -276,6 +276,22 @@ def extract_gemini_text(payload: Dict[str, Any]) -> str:
     raise ValueError("Gemini response did not contain text")
 
 
+def resolve_google_judge_api_key(config: Dict[str, Any]) -> Optional[str]:
+    """Resolve the local canonical Google API key name.
+
+    This workspace conventionally uses GOOGLE_API_KEY. We also accept the
+    more Gemini-specific aliases for portability.
+    """
+    return (
+        os.environ.get("GOOGLE_API_KEY")
+        or config.get("GOOGLE_API_KEY")
+        or os.environ.get("GEMINI_API_KEY")
+        or config.get("GEMINI_API_KEY")
+        or os.environ.get("GOOGLE_GENAI_API_KEY")
+        or config.get("GOOGLE_GENAI_API_KEY")
+    )
+
+
 def call_gemini_judge(api_key: str, model: str, prompt: str) -> Dict[str, Any]:
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -497,7 +513,7 @@ def main() -> int:
 
     judge_config = envlib.get_config()
     judge_provider = args.judge_provider
-    gemini_api_key = judge_config.get("GEMINI_API_KEY")
+    gemini_api_key = resolve_google_judge_api_key(judge_config)
     judge_model = args.judge_model or judge_config.get("GEMINI_MODEL") or DEFAULT_JUDGE_MODEL
     if judge_provider == "auto":
         judge_provider = "gemini" if gemini_api_key else "none"

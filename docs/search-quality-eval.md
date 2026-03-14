@@ -34,7 +34,8 @@ uv run python scripts/evaluate_search_quality.py \
 
 Gemini configuration:
 
-- set `GEMINI_API_KEY` to enable LLM judging
+- preferred on this workspace: set `GOOGLE_API_KEY`
+- also accepted: `GEMINI_API_KEY` or `GOOGLE_GENAI_API_KEY`
 - optional: set `GEMINI_MODEL`
 - default model is `gemini-3-pro-preview` for the direct Gemini API
 

@@ -243,7 +243,9 @@ def get_config() -> Dict[str, Any]:
 
     keys = [
         ('XAI_API_KEY', None),
+        ('GOOGLE_API_KEY', None),
         ('GEMINI_API_KEY', None),
+        ('GOOGLE_GENAI_API_KEY', None),
         ('OPENROUTER_API_KEY', None),
         ('PARALLEL_API_KEY', None),
         ('BRAVE_API_KEY', None),

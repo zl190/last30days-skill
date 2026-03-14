@@ -77,5 +77,25 @@ class TestPathWithoutNode(unittest.TestCase):
         self.assertEqual(filtered, "/usr/bin:/opt/homebrew/bin")
 
 
+class TestJudgeKeyResolution(unittest.TestCase):
+    def test_prefers_google_api_key(self):
+        config = {
+            "GOOGLE_API_KEY": "google-key",
+            "GEMINI_API_KEY": "gem-key",
+            "GOOGLE_GENAI_API_KEY": "genai-key",
+        }
+        self.assertEqual(evalsq.resolve_google_judge_api_key(config), "google-key")
+
+    def test_falls_back_to_gemini_aliases(self):
+        self.assertEqual(
+            evalsq.resolve_google_judge_api_key({"GEMINI_API_KEY": "gem-key"}),
+            "gem-key",
+        )
+        self.assertEqual(
+            evalsq.resolve_google_judge_api_key({"GOOGLE_GENAI_API_KEY": "genai-key"}),
+            "genai-key",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
