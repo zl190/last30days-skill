@@ -291,8 +291,31 @@ def record_run(
         conn.close()
 
 
+_RESEARCH_RUNS_COLUMNS = frozenset({
+    "status", "error_message", "duration_seconds",
+    "prompt_tokens", "completion_tokens", "token_cost",
+    "findings_new", "findings_updated",
+})
+
+_FINDINGS_COLUMNS = frozenset({
+    "source", "source_url", "source_title", "author",
+    "content", "summary", "engagement_score", "relevance_score",
+    "last_seen", "sighting_count", "dismissed",
+})
+
+
+def _validate_columns(kwargs: dict, allowed: frozenset, table: str):
+    """Validate that all kwargs keys are allowed column names."""
+    if not kwargs:
+        raise ValueError(f"No columns specified for {table} update")
+    bad = set(kwargs.keys()) - allowed
+    if bad:
+        raise ValueError(f"Invalid column(s) for {table}: {bad}")
+
+
 def update_run(run_id: int, **kwargs):
     """Update a research run's fields."""
+    _validate_columns(kwargs, _RESEARCH_RUNS_COLUMNS, "research_runs")
     conn = _connect()
     try:
         sets = ", ".join(f"{k} = ?" for k in kwargs)
@@ -425,6 +448,7 @@ def search_findings(query: str, limit: int = 20) -> List[Dict[str, Any]]:
 
 def update_finding(finding_id: int, **kwargs):
     """Update a finding's fields."""
+    _validate_columns(kwargs, _FINDINGS_COLUMNS, "findings")
     conn = _connect()
     try:
         sets = ", ".join(f"{k} = ?" for k in kwargs)
