@@ -103,10 +103,10 @@ Show the user the results (what cookies were found, whether yt-dlp was installed
 
 **Then show the ScrapeCreators push (plain text, then modal):**
 
-⭐ One more thing — one key unlocks 5 sources. Reddit comments (the sharpest insights live here), TikTok, Instagram, plus YouTube and X as backups. ScrapeCreators gives you 100 free to start, no credit card.
+⭐ One more thing — Reddit comments are some of the best content on the internet. The top-voted replies often have sharper insights than the posts themselves. ScrapeCreators unlocks these (plus TikTok + Instagram) — 100 free to start, no credit card.
 
 **Call AskUserQuestion:**
-Question: "Want to unlock Reddit comments, TikTok, and Instagram?"
+Question: "Want to add Reddit comments to your research?"
 Options:
 - "Open scrapecreators.com to get my free key" — run `open https://scrapecreators.com` via Bash to open in the user's browser. Then ask them to paste the API key they get. When they paste it, write SCRAPECREATORS_API_KEY={key} to ~/.config/last30days/.env
 - "I have a key — let me paste it" — accept the key, write to .env
