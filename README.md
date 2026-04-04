@@ -34,7 +34,7 @@ Instagram Reels is now the 8th signal source. TikTok and Instagram both run on S
 
 **New in V2.5 - dramatically better results:**
 
-1. **Polymarket prediction markets and Hacker News.** See what people are betting real money on and what the technical community is actually discussing. Search "Arizona Basketball" and get NCAA Tournament championship odds (Arizona: 12%), #1 seed probability (88%), and Big 12 title race (69%) - pulled from 50+ open markets across 10 events, not just Reddit opinions. Search "Iran War" and get 15 live prediction markets with strike probabilities, regime change bets, and war declaration odds. Two-pass query expansion with tag-based domain bridging discovers markets where your topic is an outcome buried inside a broader event, not just a title keyword match. HN stories, Show HN posts, and comment insights are scored by points + comments and participate in cross-source convergence detection.
+1. **Polymarket prediction markets and Hacker News.** See what people are betting real money on and what the technical community is actually discussing. Search "Arizona Basketball" and get NCAA Tournament championship odds (Arizona: 12%), #1 seed probability (88%), and Big 12 title race (69%) - pulled from 50+ open markets across 10 events, not just Reddit opinions. Search "Iran War" and get 15 live prediction markets with strike probabilities, regime change bets, and war declaration odds. Two-pass query expansion with tag-based domain bridging discovers markets where your topic is an outcome buried inside a broader event, not just a title keyword match. HN stories and comment insights are scored by points + comments and participate in cross-source convergence detection.
 2. **Multi-signal quality-ranked relevance scoring.** Every result across all six sources runs through a composite scoring pipeline: bidirectional text similarity with synonym expansion and token overlap, engagement velocity normalization, source authority weighting, cross-platform convergence detection via hybrid trigram-token Jaccard similarity, and temporal recency decay. Polymarket markets are ranked on a 5-factor weighted composite - text relevance (30%), 24-hour volume (30%), liquidity depth (15%), price movement velocity (15%), and outcome competitiveness (10%) - with outcome-aware scoring that matches your topic against individual market positions, not just event titles. A blinded evaluation scored v2.5 at 4.38/5.0 vs 3.73/5.0 for v1 across 5 test topics.
 3. **X handle resolution.** Search "Dor Brothers" and the skill resolves their handle (@thedorbrothers), then searches their posts directly - finding their 5,600-like viral tweet that keyword search missed entirely. Works for people, brands, products, and tools.
 
@@ -917,17 +917,17 @@ claude mcp add codex-cli -- npx -y codex-mcp-server
 
 Step 2: The Review Loop Pattern
 ```
-Phase 1 - Claude Implements
+Step 1 - Claude Implements
 > Build [feature/fix] following [requirements]
 
-Phase 2 - Codex Reviews
+Step 2 - Codex Reviews
 > Ask Codex to review the changes I just made. Look for bugs,
 > edge cases, performance issues, security concerns.
 
-Phase 3 - Claude Fixes
+Step 3 - Claude Fixes
 > Implement the feedback from Codex's review
 
-Phase 4 - Final Verification (optional)
+Step 4 - Final Verification (optional)
 > Ask Codex for a final review of the fixes
 ```
 
@@ -994,9 +994,9 @@ sudo "/Applications/Python 3.12/Install Certificates.command"
 
 ## How It Works
 
-### Two-Phase Search Architecture
+### Two-Pass Search Architecture
 
-**Phase 1: Broad discovery**
+**Broad discovery pass**
 - OpenAI Responses API with `web_search` tool scoped to reddit.com
 - Vendored Twitter GraphQL search (or xAI API fallback) for X search
 - YouTube search + transcript extraction via yt-dlp (when installed)
@@ -1006,11 +1006,11 @@ sudo "/Applications/Python 3.12/Install Certificates.command"
 - Reddit JSON enrichment for real engagement metrics (upvotes, comments)
 - Scoring algorithm weighing recency, relevance, and engagement
 
-**Phase 2: Smart supplemental search** (new in V2)
-- Extracts entities from Phase 1 results: @handles from X posts, subreddit names from Reddit
+**Smart supplemental pass** (new in V2)
+- Extracts entities from broad discovery results: @handles from X posts, subreddit names from Reddit
 - Runs targeted follow-up searches: `from:@handle topic` on X, subreddit-scoped searches on Reddit
 - Uses Reddit's free `.json` search endpoint (no API key needed for supplemental)
-- Merges and deduplicates with Phase 1 results
+- Merges and deduplicates with broad discovery results
 - Skipped on `--quick` for speed; extended on `--deep`
 
 ### Model Fallback Chain
@@ -1105,7 +1105,7 @@ Search "Iran War" and you get 15 live prediction markets: US strikes by March (7
 
 **Neg-risk binary market synthesis** handles Polymarket's multi-outcome events (where each team/entity is a separate Yes/No market). The engine detects the binary sub-market pattern, extracts entity names from market questions, and synthesizes a unified outcome display - showing "Arizona: 12%, Duke: 18%, Houston: 15%" instead of raw "Yes: 12%, No: 88%" for each sub-market.
 
-**Hacker News as a source** - HN stories, Show HN posts, and Ask HN threads are searched via the Algolia API, scored by points + comments, and synthesized alongside all other sources. Comment insights are extracted from top threads to surface the technical community's actual take. HN items participate in cross-source convergence detection - when the same topic trends on HN AND Reddit AND YouTube, that signal gets flagged.
+**Hacker News as a source** - HN stories and Ask HN threads are searched via the Algolia API, scored by points + comments, and synthesized alongside all other sources. Comment insights are extracted from top threads to surface the technical community's actual take. HN items participate in cross-source convergence detection - when the same topic trends on HN AND Reddit AND YouTube, that signal gets flagged.
 
 No API keys required for either source. Inspired by community PRs from [@ARJ999](https://github.com/ARJ999) ([#12](https://github.com/mvanhorn/last30days-skill/pull/12)) and [@wkbaran](https://github.com/wkbaran) ([#26](https://github.com/mvanhorn/last30days-skill/pull/26)), with [@gbessoni](https://github.com/gbessoni) endorsing HN as the right addition.
 
@@ -1205,7 +1205,7 @@ V2 finds significantly more content than V1. Two major improvements:
 
 **Smarter query construction** - V1 sent overly specific queries to X search (literal keyword AND matching), causing 0 results on topics that were actively trending. V2 aggressively strips research/meta words ("best", "prompt", "techniques", "tips") and question prefixes ("what are people saying about") to extract just the core topic. Example: `"vibe motion best prompt techniques"` now searches for `"vibe motion"` instead of `"vibe motion prompt techniques"` - going from 0 posts to 12+. Automatically retries with fewer keywords if the first attempt returns nothing.
 
-**Smart supplemental search (Phase 2)** - After the initial broad search, extracts key @handles and subreddits from the results, then runs targeted follow-up searches to find content that keyword search alone misses. Example: researching "Open Claw" automatically discovers @openclaw, @steipete and drills into their posts. For Reddit, it hits the free `.json` search endpoint scoped to discovered subreddits - no extra API keys needed.
+**Smart supplemental search** - After the initial broad search, extracts key @handles and subreddits from the results, then runs targeted follow-up searches to find content that keyword search alone misses. Example: researching "Open Claw" automatically discovers @openclaw, @steipete and drills into their posts. For Reddit, it hits the free `.json` search endpoint scoped to discovered subreddits - no extra API keys needed.
 
 **Reddit JSON enrichment** - Fetches real upvote and comment counts from Reddit's free API for every thread, giving you actual engagement signals instead of estimates.
 
